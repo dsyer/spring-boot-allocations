@@ -48,13 +48,27 @@ and attach a https://github.com/jvm-profiling-tools/async-profiler[profiler]:
 $ profiler.sh d 10 -e alloc -o svg=total -f /tmp/flame.svg jps
 ```
 
-Without thread isolation for each application (revert commit d8de95ddf):
+> HINT: you can click on the flames to zoom in on the stack above
+> where you click.
 
-image::images/flame_master.svg[master]
+Without thread isolation for each application (revert commit
+d8de95ddf), the tiny little flickers at the top are one per
+application instance, but all instances seem to share metrics for the
+base of the fire in Spring.
 
-With thread isolation (branch "master"):
+image::images/flame_master.svg[nothread]
+
+With thread isolation (branch "master") each "hump" in the graph is a
+single instance of the app (in its own classloader and its own
+thread). As a result it's easier to focus on a single application
+lifecycle:
 
 image::images/flame_thread.svg[thread]
+
+Same but with `-e cpu` (which I think is the default), showing that
+garbage collection and "brown" (non TLAB) allocations are a heavy tax:
+
+image::images/flame_cpu.svg[cpu]
 
 == Ideas
 
@@ -75,3 +89,7 @@ reading. It always shows up in the flame graphs.
 
 * CGILib: might not be slow at all actually, but it comes in for some
 stick generally. Worth a look.
+
+* Webflux is the other big hog in the simple demo application, after
+from `@Configuration` (Netty itself is relatively fast). Maybe that
+can be streamlined as well?
