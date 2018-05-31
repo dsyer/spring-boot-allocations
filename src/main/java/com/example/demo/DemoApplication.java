@@ -36,6 +36,12 @@ public class DemoApplication implements Runnable, Closeable {
 
 	private ClassLoader orig;
 
+	private Thread runThread;
+
+	protected Throwable error;
+
+	private long timeout = 120000;
+
 	@Bean
 	public RouterFunction<?> userEndpoints() {
 		return route(GET("/"), request -> ok().body(Mono.just("Hello"), String.class));
@@ -63,6 +69,10 @@ public class DemoApplication implements Runnable, Closeable {
 		if (instance != null) {
 			instance.close();
 		}
+		if (runThread != null) {
+			runThread.setContextClassLoader(null);
+			runThread = null;
+		}
 		if (context != null) {
 			context.close();
 		}
@@ -83,8 +93,22 @@ public class DemoApplication implements Runnable, Closeable {
 
 	@Override
 	public void run() {
-		context = new SpringApplicationBuilder(DemoApplication.class)
-				.run("--server.port=0", "--spring.jmx.enabled=false");
+		this.runThread = new Thread(() -> {
+			try {
+				context = new SpringApplicationBuilder(DemoApplication.class)
+						.run("--server.port=0", "--spring.jmx.enabled=false");
+			}
+			catch (Throwable ex) {
+				error = ex;
+			}
+		});
+		this.runThread.start();
+		try {
+			this.runThread.join(timeout);
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	private Class<?> loadMainClass(Class<?> type) throws ClassNotFoundException {
