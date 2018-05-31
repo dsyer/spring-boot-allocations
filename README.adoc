@@ -23,6 +23,14 @@ MainBenchmark.shared      ss   10  0.290 ± 0.072   s/op
 The error bars are large, but there may be a small difference that is
 worth keeping, even from such a minor change.
 
+With `LazyInitBeanFactoryPostProcessor` (quite a useful boost):
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.isolated    ss   10  1.197 ± 0.188   s/op
+MainBenchmark.shared      ss   10  0.226 ± 0.067   s/op
+```
+
 == GC Data
 
 Run the app with `-verbose:gc -XX:+PrintGCDetails
@@ -69,6 +77,13 @@ Same but with `-e cpu` (which I think is the default), showing that
 garbage collection and "brown" (non TLAB) allocations are a heavy tax:
 
 image::images/flame_cpu.svg[cpu]
+
+Same (`-e alloc` again) but with the `LazyInitBeanFactoryPostProcessor`:
+
+image::images/flame_lazy.svg[lazy]
+
+Notice the different (thinner) profile for the right hand "rump"
+containing `ConfigurationClassPostProcessor`.
 
 == Ideas
 
