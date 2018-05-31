@@ -75,7 +75,7 @@ public class DemoApplication implements Runnable, Closeable {
 				loader = null;
 			}
 			catch (Exception e) {
-				log.error("Failed to close context", e);
+				log.error("Failed to close loader", e);
 			}
 		}
 		System.gc();
