@@ -1,0 +1,33 @@
+Laptop results:
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.isolated    ss   10  1.305 ± 0.162   s/op
+MainBenchmark.shared      ss   10  0.257 ± 0.094   s/op
+```
+
+* "isolated" means a new class loader per application context (so all
+the Spring metadata has to be read again because caches get cleared).
+* "shared" means the same class loader for all contexts. In principal
+this is as fast as we can ever go (things will always be a bit slower
+because classes have to be loaded).
+
+Without `spring.components`:
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.isolated    ss   10  1.331 ± 0.145   s/op
+MainBenchmark.shared      ss   10  0.290 ± 0.072   s/op
+```
+
+The error bars are large, but there may be a small difference that is
+worth keeping, even from such a minor change.
+
+== Ideas
+
+Up to now the strategy has been "use ASM and cache like crazy, run
+everything dynamically". What about precomputing all that stuff?
+
+* `@ComponentScan` -> `spring.components`. What about `@Import`?
+* `BeanInfoFactory`
+* `ConfigurationClassPostProcessor`
