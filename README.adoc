@@ -48,23 +48,30 @@ and attach a https://github.com/jvm-profiling-tools/async-profiler[profiler]:
 $ profiler.sh d 10 -e alloc -o svg=total -f /tmp/flame.svg jps
 ```
 
-Without thread isolation for each application:
+Without thread isolation for each application (revert commit d8de95ddf):
 
 image::images/flame_master.svg[master]
 
-
-With thread isolation (banch "thread"):
+With thread isolation (branch "master"):
 
 image::images/flame_thread.svg[thread]
 
 == Ideas
 
-Up to now the strategy has been "use ASM and cache like crazy, run
+* Up to now the strategy has been "use ASM and cache like crazy, run
 everything dynamically". What about precomputing all that stuff?
 
-* `@ComponentScan` -> `spring.components`. What about `@Import`?
+* `@ComponentScan` -> `spring.components` and it seems to make very
+little difference (but every little helps).
 
-* `BeanInfoFactory`
+* What about `@Import`? A large fraction of configuration class
+processing is taken up with `@Import`.
+
+* `BeanInfoFactory` isn't a big footprint on the flame graphs, but
+it's not minute either.
 
 * `ConfigurationClassPostProcessor` does a lot of imports and metadata
 reading. It always shows up in the flame graphs.
+
+* CGILib: might not be slow at all actually, but it comes in for some
+stick generally. Worth a look.
