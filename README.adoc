@@ -23,11 +23,48 @@ MainBenchmark.shared      ss   10  0.290 ± 0.072   s/op
 The error bars are large, but there may be a small difference that is
 worth keeping, even from such a minor change.
 
+== GC Data
+
+Run the app with `-verbose:gc -XX:+PrintGCDetails
+-XX:+PrintGCTimeStamps` to see GC pauses. E.g.
+
+```
+1.595: [Full GC (System.gc()) [PSYoungGen: 2080K->0K(23552K)] [ParOldGen: 11028K->11106K(55296K)] 13109K->11106K(78848K), [Metaspace: 23083K->23083K(1071104K)], 0.0511875 secs] [Times: user=0.15 sys=0.00, real=0.05 secs] 
+```
+
+Total time 200ms.
+
+== Flame Graphs
+
+Run the app with this arguments:
+
+```
+-Ddemo.count=1000000 -Xmx128m -noverify -XX:TieredStopAtLevel=1
+```
+
+and attach a https://github.com/jvm-profiling-tools/async-profiler[profiler]:
+
+```
+$ profiler.sh d 10 -e alloc -o svg=total -f /tmp/flame.svg jps
+```
+
+Without thread isolation for each application:
+
+image::images/flame_master.svg[master]
+
+
+With thread isolation (banch "thread"):
+
+image::images/flame_thread.svg[thread]
+
 == Ideas
 
 Up to now the strategy has been "use ASM and cache like crazy, run
 everything dynamically". What about precomputing all that stuff?
 
 * `@ComponentScan` -> `spring.components`. What about `@Import`?
+
 * `BeanInfoFactory`
-* `ConfigurationClassPostProcessor`
+
+* `ConfigurationClassPostProcessor` does a lot of imports and metadata
+reading. It always shows up in the flame graphs.
