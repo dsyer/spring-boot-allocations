@@ -31,6 +31,24 @@ MainBenchmark.isolated    ss   10  1.197 ± 0.188   s/op
 MainBenchmark.shared      ss   10  0.226 ± 0.067   s/op
 ```
 
+=== Desktop Results
+
+Vanilla:
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.isolated    ss   10  0.768 ± 0.110   s/op
+MainBenchmark.shared      ss   10  0.159 ± 0.048   s/op
+```
+
+and with `LazyInitBeanFactoryPostProcessor`:
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.isolated    ss   10  0.696 ± 0.068   s/op
+MainBenchmark.shared      ss   10  0.131 ± 0.024   s/op
+```
+
 == GC Data
 
 Run the app with `-verbose:gc -XX:+PrintGCDetails
