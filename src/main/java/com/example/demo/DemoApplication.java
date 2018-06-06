@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
-import com.example.config.LazyInitBeanFactoryPostProcessor;
+import com.example.config.DemoInitializer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +15,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.reactive.function.server.RouterFunction;
 
@@ -50,14 +49,18 @@ public class DemoApplication implements Runnable, Closeable {
 		return route(GET("/"), request -> ok().body(Mono.just("Hello"), String.class));
 	}
 
-	@SuppressWarnings("resource")
 	public static void main(String[] args) throws Exception {
 		for (int i = 0; i < Integer.getInteger("demo.count", 1) - 1; i++) {
 			try (DemoApplication app = new DemoApplication()) {
 				app.isolated();
+				app.close();
 			}
 		}
-		new DemoApplication().run();
+		DemoApplication last = new DemoApplication();
+		last.run();
+		if (Boolean.getBoolean("demo.close")) {
+			last.close();
+		}
 	}
 
 	public void isolated() throws Exception {
@@ -99,7 +102,7 @@ public class DemoApplication implements Runnable, Closeable {
 		this.runThread = new Thread(() -> {
 			try {
 				context = new SpringApplicationBuilder(DemoApplication.class)
-						.run("--server.port=0", "--spring.jmx.enabled=false");
+						.initializers(new DemoInitializer()).run("--server.port=0", "--spring.jmx.enabled=false");
 			}
 			catch (Throwable ex) {
 				error = ex;

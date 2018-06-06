@@ -126,3 +126,55 @@ stick generally. Worth a look.
 * Webflux is the other big hog in the simple demo application, after
 from `@Configuration` (Netty itself is relatively fast). Maybe that
 can be streamlined as well?
+
+Sifting through some flame graphs and other hints and data points, we
+came to the conclusion that there are maybe 3 areas that are worth
+some more research:
+
+* `ConfigurationClassPostProcessor` is definitely up there and you can
+quite easily change the `MetadataReaderFactory` it uses (Spring Boot
+already boosts performance that way). We tried to serialize the
+metadata, but the existing implementation is not serializable and
+cannot easily be made so. There are some concerns about the fragility
+of the annotation metadata implementations that are in use already
+(one is ASM based and the other needs classes to be loaded). We need
+the ASM-generated data for `ConfigurationClassPostProcessor`.
+
+* CGLib *is* a bit slow, compared to vanilla reflective access. So
+replacing the proxies in `@Configuration` processing might be a good
+idea. Phil had some code that did this but he thought it didn't make
+enough difference to continue (see
+https://github.com/philwebb/spring-framework/tree/config-processor[here]).
+
+* Bean creation is expensive still. `BeanWrapper` and `BeanInfo` are
+right in the centre of that. There is a `BeanInfo` implementation in
+this project (from Phil again) but it doesn't have any measurable
+effect. Something else might work. The place to start looking is
+`AbstractAutowireCapableBeanFactory` where the `doCreateBean()` method
+could be replaced.
+
+Also Spring Boot condition messages create strings and concatenate
+them even if they might never be used. this shows up a GC churn.
+
+== Serializable Class Metadata
+
+Using Kryo we were able to cache and re-load configuration class
+metadata using a custom `MetadataReaderFactory`. The results are so
+far inconclusive. Maybe the cost of serialization is close to the cost
+of the ASM processing, so nothing is to be gained.
+
+Raw (a bit slower than last week?):
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.isolated    ss   10  1.784 ± 0.128   s/op
+MainBenchmark.shared      ss   10  0.407 ± 0.163   s/op
+```
+
+after serialization:
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.isolated    ss   10  1.803 ± 0.152   s/op
+MainBenchmark.shared      ss   10  0.418 ± 0.069   s/op
+```
