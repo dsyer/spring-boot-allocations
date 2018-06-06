@@ -186,14 +186,14 @@ lifecycle, and with a higher sampling rate:
 java -agentpath:<path-to>/async-profiler/build/libasyncProfiler.so=start,svg,file=/tmp/flame.svg,event=cpu,interval=100000 -Ddemo.close=true ...
 ```
 
-The cached flamegraph doesn't look very different. The metadata in the
-cache probably contains all the warts of the dynamically computed one,
-in terms of memory usage. It still has all those ASM `Type` instances
-for example, so maybe we need a more efficient representation of
-`AnnotationMetadata` and `ClassMetadata` to take advantage of this
-kind of strategy.
+The cached flamegraph doesn't look very different from the vanilla
+one. The metadata in the cache probably contains all the warts of the
+dynamically computed one, in terms of memory usage. It still has all
+those ASM `Type` instances for example, so maybe we need a more
+efficient representation of `AnnotationMetadata` and `ClassMetadata`
+to take advantage of this kind of strategy.
 
-Benchmarks for different metadata reading strategies:
+Raw benchmarks for different metadata reading strategies:
 
 ```
 Benchmark                     Mode  Cnt   Score    Error  Units
@@ -215,3 +215,41 @@ start). Key:
 * "reference": used by Spring Boot for `ConfigurationClassPostProcessor`, efficient reference-based cache of the ASM data
 
 * "simple" is the raw ASM reader.
+
+== Bean Creation Benchmarks
+
+Create a `Bean` and inject a `Foo` into it:
+
+```
+Benchmark                       Mode  Cnt           Score           Error  Units
+BeanCreationBenchmark.bare     thrpt    5  2863559599.756 ± 283985900.459  ops/s
+BeanCreationBenchmark.cglib    thrpt    5      516603.359 ±      6503.198  ops/s
+BeanCreationBenchmark.proxy    thrpt    5      565993.698 ±     53195.230  ops/s
+BeanCreationBenchmark.reflect  thrpt    5     9968507.609 ±    133542.774  ops/s
+BeanCreationBenchmark.simple   thrpt    5     4066914.320 ±    589505.416  ops/s
+```
+
+Key:
+
+* "bare": just uses `new MyBean(foo)`
+
+* "cglib": creates a CGLib proxy of `MyBean` and calls `setFoo(foo)`
+
+* "proxy": same but for a JDK proxy
+
+* "reflect": calls the constructor reflectively
+
+* "simple": uses `DefaultListableBeanFactory.createBean()` to create a `MyBean` instance
+
+Learnings:
+
+* Proxies are slow - almost 20 times slower than vanilla reflection. CGLib isn't much different than JDK proxies (it used to be much slower).
+
+* The `BeanFactory` is more than twice as slow as manually using reflection to create the bean. The difference might be in the use of `BeanInfo`, which always shows up on flame graphs.
+
+* Reflection is 300 times slower than pure compiled bytecode.
+
+A factor of 2 is almost not worth chasing at this level. A factor of
+20 probably is. Ditto 300. So we should try to avoid proxies as much
+as possible, and reflection. These results are probably independent of
+the GC issues experienced by the full Spring Boot application startup.
