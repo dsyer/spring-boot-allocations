@@ -16,16 +16,6 @@
 
 package com.example.config;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.Serializer;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.FactoryBean;
@@ -40,11 +30,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
-import org.springframework.core.type.classreading.MetadataReader;
 
 /**
  * @author Dave Syer
@@ -117,69 +103,4 @@ class FasterMetadataReaderFactoryBean
 		this.metadataReaderFactory.clearCache();
 	}
 
-}
-
-class FasterMetadataReaderFactory
-		extends ConcurrentReferenceCachingMetadataReaderFactory {
-
-	private Kryo kryo = new Kryo();
-	
-	{
-		kryo.addDefaultSerializer(ClassLoader.class, new SimpleMetadataReaderSerializer());
-	}
-
-	public FasterMetadataReaderFactory() {
-		super();
-	}
-
-	public FasterMetadataReaderFactory(ClassLoader classLoader) {
-		super(classLoader);
-	}
-
-	public FasterMetadataReaderFactory(ResourceLoader resourceLoader) {
-		super(resourceLoader);
-	}
-
-	@Override
-	protected MetadataReader createMetadataReader(Resource resource) throws IOException {
-		if (resource instanceof ClassPathResource) {
-			return serializableReader((ClassPathResource) resource);
-		}
-		return super.createMetadataReader(resource);
-	}
-
-	private MetadataReader serializableReader(ClassPathResource resource) {
-		File file = new File("/tmp/cache", resource.getPath());
-		if (file.exists()) {
-			try (Input stream = new Input(new FileInputStream(file))) {
-				return (MetadataReader) kryo.readClassAndObject(stream);
-			}
-			catch (Exception e) {
-				throw new IllegalStateException("Could not deserialize", e);
-			}
-		}
-		file.getParentFile().mkdirs();
-		try (Output stream = new Output(new FileOutputStream(file))) {
-			MetadataReader reader = super.createMetadataReader(resource);
-			kryo.writeClassAndObject(stream, reader);
-			return reader;
-		}
-		catch (Exception e) {
-			throw new IllegalStateException("Could not serialize", e);
-		}
-	}
-}
-
-class SimpleMetadataReaderSerializer extends Serializer<ClassLoader> {
-
-	@Override
-	public void write(Kryo kryo, Output output, ClassLoader object) {
-	}
-
-	@Override
-	public ClassLoader read(Kryo kryo, Input input,
-			Class<ClassLoader> type) {
-		return getClass().getClassLoader();
-	}
-	
 }

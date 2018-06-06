@@ -160,21 +160,58 @@ them even if they might never be used. this shows up a GC churn.
 
 Using Kryo we were able to cache and re-load configuration class
 metadata using a custom `MetadataReaderFactory`. The results are so
-far inconclusive. Maybe the cost of serialization is close to the cost
-of the ASM processing, so nothing is to be gained.
-
-Raw (a bit slower than last week?):
+far inconclusive. The cost of serialization is close to the cost
+of the ASM processing, so nothing is gained.
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.784 ± 0.128   s/op
-MainBenchmark.shared      ss   10  0.407 ± 0.163   s/op
+MainBenchmark.isolated    ss   10  1.294 ± 0.095   s/op
+MainBenchmark.shared      ss   10  0.264 ± 0.075   s/op
 ```
 
-after serialization:
+Flame graphs with `alloc=cpu`, without the cache:
+
+image::images/flame_cpu_vanilla.svg[cpu_vanilla]
+
+and with the cache:
+
+image::images/flame_cpu_cached.svg[cpu_cached]
+
+Notice the large fraction of the samples in `GCTaskThread::run`
+(19.47% of the total startup time). These graphs were generated using
+the agent, so it captures the startup and only one application context
+lifecycle, and with a higher sampling rate:
 
 ```
-Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.803 ± 0.152   s/op
-MainBenchmark.shared      ss   10  0.418 ± 0.069   s/op
+java -agentpath:<path-to>/async-profiler/build/libasyncProfiler.so=start,svg,file=/tmp/flame.svg,event=cpu,interval=100000 -Ddemo.close=true ...
 ```
+
+The cached flamegraph doesn't look very different. The metadata in the
+cache probably contains all the warts of the dynamically computed one,
+in terms of memory usage. It still has all those ASM `Type` instances
+for example, so maybe we need a more efficient representation of
+`AnnotationMetadata` and `ClassMetadata` to take advantage of this
+kind of strategy.
+
+Benchmarks for different metadata reading strategies:
+
+```
+Benchmark                     Mode  Cnt   Score    Error  Units
+MetadataBenchmark.caching    thrpt   10  29.240 ± 13.408  ops/s
+MetadataBenchmark.kryo       thrpt   10  65.272 ± 24.374  ops/s
+MetadataBenchmark.reference  thrpt   10  48.779 ± 23.635  ops/s
+MetadataBenchmark.simple     thrpt   10  27.544 ± 13.063  ops/s
+```
+
+The error bars are large but the averages are consistent between
+runs. It's still warming up the JIT as it runs and it's not clear we
+actually want it to be warm (it will never be warm on a cold
+start). Key:
+
+* "caching": used by Spring by default (and for `@ComponentScan` also in Spring Boot)
+
+* "kryo": is the special cache of serialized metadata
+
+* "reference": used by Spring Boot for `ConfigurationClassPostProcessor`, efficient reference-based cache of the ASM data
+
+* "simple" is the raw ASM reader.

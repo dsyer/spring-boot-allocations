@@ -102,7 +102,8 @@ public class DemoApplication implements Runnable, Closeable {
 		this.runThread = new Thread(() -> {
 			try {
 				context = new SpringApplicationBuilder(DemoApplication.class)
-						.initializers(new DemoInitializer()).run("--server.port=0", "--spring.jmx.enabled=false");
+                .initializers(new DemoInitializer())
+						.run("--server.port=0", "--spring.jmx.enabled=false");
 			}
 			catch (Throwable ex) {
 				error = ex;
