@@ -62,48 +62,25 @@ Total time 200ms.
 
 == Flame Graphs
 
-Run the app with this arguments:
+Download the https://github.com/jvm-profiling-tools/async-profiler[profiler] and run the app with these arguments:
 
 ```
--Ddemo.count=1000000 -Xmx128m -noverify -XX:TieredStopAtLevel=1
-```
-
-and attach a https://github.com/jvm-profiling-tools/async-profiler[profiler]:
-
-```
-$ profiler.sh d 10 -e alloc -o svg=total -f /tmp/flame.svg jps
+-agentpath:<path-to>/async-profiler/build/libasyncProfiler.so=start,svg,file=/tmp/flame.svg,event=cpu,interval=100000 -Ddemo.close=true -Xmx128m -noverify -XX:TieredStopAtLevel=1
 ```
 
 > HINT: you can click on the flames to zoom in on the stack above
 > where you click.
 
-Without thread isolation for each application (revert commit
-d8de95ddf), the tiny little flickers at the top are one per
-application instance, but all instances seem to share metrics for the
-base of the fire in Spring.
+image::images/flame_vanilla.svg[thread]
 
-image::images/flame_master.svg[nothread]
+Same but with the `LazyInitBeanFactoryPostProcessor`:
 
-With thread isolation (branch "master") each "hump" in the graph is a
-single instance of the app (in its own classloader and its own
-thread). As a result it's easier to focus on a single application
-lifecycle:
-
-image::images/flame_thread.svg[thread]
-
-Same but with `-e cpu` (which I think is the default), showing that
-garbage collection and "brown" (non TLAB) allocations are a heavy tax:
-
-image::images/flame_cpu.svg[cpu]
-
-Same (`-e alloc` again) but with the `LazyInitBeanFactoryPostProcessor`:
-
-image::images/flame_lazy.svg[lazy]
+image::images/flame_lazee.svg[lazy]
 
 Notice the different (thinner) profile for the right hand "rump"
 containing `ConfigurationClassPostProcessor`.
 
-There is a `MicroApplication` (no `@Configurtion` and no Spring Boot)
+There is a `MicroApplication` (no `@Configuration` and no Spring Boot)
 that starts up very quickly. Here's a flame graph:
 
 image::images/flame_micro.svg[cpu]
@@ -177,13 +154,9 @@ MainBenchmark.isolated    ss   10  1.294 ± 0.095   s/op
 MainBenchmark.shared      ss   10  0.264 ± 0.075   s/op
 ```
 
-Flame graphs with `alloc=cpu`, without the cache:
+Flame graphs with `alloc=cpu`, with the cache:
 
-image::images/flame_cpu_vanilla.svg[cpu_vanilla]
-
-and with the cache:
-
-image::images/flame_cpu_cached.svg[cpu_cached]
+image::images/flame_cached.svg[cpu_cached]
 
 Notice the large fraction of the samples in `GCTaskThread::run`
 (19.47% of the total startup time). These graphs were generated using
@@ -191,7 +164,7 @@ the agent, so it captures the startup and only one application context
 lifecycle, and with a higher sampling rate:
 
 ```
-java -agentpath:<path-to>/async-profiler/build/libasyncProfiler.so=start,svg,file=/tmp/flame.svg,event=cpu,interval=100000 -Ddemo.close=true ...
+java 
 ```
 
 The cached flamegraph doesn't look very different from the vanilla
