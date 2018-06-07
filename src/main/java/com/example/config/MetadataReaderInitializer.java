@@ -40,7 +40,7 @@ import org.springframework.util.ReflectionUtils;
  * @author Dave Syer
  *
  */
-public class DemoInitializer
+public class MetadataReaderInitializer
 		implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
 	@Override

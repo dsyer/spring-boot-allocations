@@ -15,6 +15,11 @@
  */
 package com.example.bench;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
+
 import com.example.demo.DemoApplication;
 
 import org.openjdk.jmh.annotations.Level;
@@ -25,46 +30,98 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.beans.CachedIntrospectionResults;
+import org.springframework.util.ClassUtils;
+
 @State(Scope.Benchmark)
-public class LauncherState {
+public class LauncherState implements Runnable, Closeable {
 
 	private static final Logger log = LoggerFactory.getLogger(LauncherState.class);
 
-	private DemoApplication instance = new DemoApplication();
+	private Closeable instance;
+
+	private URLClassLoader loader;
+
+	private ClassLoader orig;
+
+	private Thread runThread;
+
+	protected Throwable error;
+
+	private long timeout = 120000;
+
+	private Class<?> mainClass = DemoApplication.class;
+
+	public void setMainClass(Class<?> mainClass) {
+		this.mainClass = mainClass;
+	}
 
 	@Setup(Level.Trial)
 	public void start() throws Exception {
 		System.setProperty("server.port", "0");
 	}
-
-	public void isolated() {
-		try {
-			instance.isolated();
-		}
-		catch (Exception e) {
-			log.error("Error starting context", e);
-		}
+	
+	public void shared() throws Exception {
+		instance = (Closeable) mainClass.getConstructor().newInstance();
+		run();
 	}
 
-	public void run() {
-		try {
-			instance.run();
-		}
-		catch (Exception e) {
-			log.error("Error starting context", e);
-		}
-	}
-
-	@TearDown(Level.Invocation)
-	public void close() {
-		if (instance != null) {
+	public void isolated() throws Exception {
+		Class<?> mainClass = loadMainClass(this.mainClass);
+		instance = (Closeable) mainClass.getConstructor().newInstance();
+		this.runThread = new Thread(() -> {
 			try {
-				instance.close();
+				run();
+			}
+			catch (Throwable ex) {
+				error = ex;
+			}
+		});
+		this.runThread.start();
+		try {
+			this.runThread.join(timeout);
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	@Override
+	@TearDown(Level.Invocation)
+	public void close() throws IOException {
+		CachedIntrospectionResults.clearClassLoader(getClass().getClassLoader());
+		if (instance != null) {
+			instance.close();
+		}
+		if (runThread != null) {
+			runThread.setContextClassLoader(null);
+			runThread = null;
+		}
+		if (orig != null) {
+			ClassUtils.overrideThreadContextClassLoader(orig);
+		}
+		if (loader != null) {
+			try {
+				loader.close();
+				loader = null;
 			}
 			catch (Exception e) {
-				log.error("Failed to close context", e);
+				log.error("Failed to close loader", e);
 			}
 		}
+		System.gc();
+	}
+
+	@Override
+	public void run() {
+		((Runnable) instance).run();
+	}
+
+	private Class<?> loadMainClass(Class<?> type) throws ClassNotFoundException {
+		URL[] urls = ((URLClassLoader) getClass().getClassLoader()).getURLs();
+		loader = new URLClassLoader(urls, getClass().getClassLoader().getParent());
+		orig = ClassUtils.overrideThreadContextClassLoader(loader);
+		return loader.loadClass(type.getName());
 	}
 
 }

@@ -15,6 +15,9 @@
  */
 package com.example.bench;
 
+import com.example.boot.BootApplication;
+import com.example.func.FuncApplication;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -34,8 +37,20 @@ public class MainBenchmark {
 	}
 
 	@Benchmark
+	public void func(LauncherState state) throws Exception {
+		state.setMainClass(FuncApplication.class);
+		state.isolated();
+	}
+
+	@Benchmark
+	public void boot(LauncherState state) throws Exception {
+		state.setMainClass(BootApplication.class);
+		state.isolated();
+	}
+
+	@Benchmark
 	public void shared(LauncherState state) throws Exception {
-		state.run();
+		state.shared();
 	}
 
 }

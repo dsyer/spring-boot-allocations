@@ -29,6 +29,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.stereotype.Component;
 
 /**
  * @author Dave Syer
@@ -61,6 +63,14 @@ public class BeanCountingApplicationListener
 		while (context != null) {
 			count += context.getBeanDefinitionCount();
 			names.addAll(Arrays.asList(context.getBeanDefinitionNames()));
+			if (logger.isDebugEnabled()) {
+				for (String name : context.getBeanDefinitionNames()) {
+					Class<?> type = context.getType(name);
+					if (AnnotationUtils.findAnnotation(type, Component.class)!=null) {
+						logger.debug("Component: " + type);
+					}
+				}
+			}
 			context = (ConfigurableApplicationContext) context.getParent();
 		}
 		logger.info("Bean count: " + id + "=" + count);

@@ -16,6 +16,9 @@
 
 package com.example.bench;
 
+import com.example.boot.BootApplication;
+import com.example.func.FuncApplication;
+
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -33,10 +36,42 @@ public class LauncherStateTests {
 	public OutputCapture output = new OutputCapture();
 
 	@Test
-	public void vanilla() throws Exception {
+	public void isolated() throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
 		LauncherState state = new LauncherState();
-		state.run();
+		state.isolated();
+		output.flush();
+		assertThat(output.toString()).contains("Benchmark app started");
+		state.close();
+	}
+
+	@Test
+	public void shared() throws Exception {
+		// System.setProperty("bench.args", "-verbose:class");
+		LauncherState state = new LauncherState();
+		state.shared();
+		output.flush();
+		assertThat(output.toString()).contains("Benchmark app started");
+		state.close();
+	}
+
+	@Test
+	public void func() throws Exception {
+		// System.setProperty("bench.args", "-verbose:class");
+		LauncherState state = new LauncherState();
+		state.setMainClass(FuncApplication.class);
+		state.shared();
+		output.flush();
+		assertThat(output.toString()).contains("Benchmark app started");
+		state.close();
+	}
+
+	@Test
+	public void boot() throws Exception {
+		// System.setProperty("bench.args", "-verbose:class");
+		LauncherState state = new LauncherState();
+		state.setMainClass(BootApplication.class);
+		state.shared();
 		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
 		state.close();
