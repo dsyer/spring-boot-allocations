@@ -152,7 +152,7 @@ Benchmark               Mode  Cnt  Score   Error  Units
 MainBenchmark.isolated    ss   10  1.373 ± 0.192   s/op
 MainBenchmark.boot        ss   10  1.309 ± 0.216   s/op
 MainBenchmark.manual      ss   10  1.235 ± 0.180   s/op
-MainBenchmark.func        ss   10  0.978 ± 0.226   s/op
+MainBenchmark.func        ss   10  0.858 ± 0.138   s/op
 ```
 
 * "isolated" is the canonical `DemoApplication` with `@SpringBootApplication`.

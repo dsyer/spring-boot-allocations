@@ -43,18 +43,34 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.ReactiveAdapterRegistry;
+import org.springframework.format.support.FormattingConversionService;
 import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.http.server.reactive.HttpHandler;
-import org.springframework.web.reactive.config.WebFluxConfigurationSupport;
+import org.springframework.validation.Validator;
+import org.springframework.web.reactive.DispatcherHandler;
+import org.springframework.web.reactive.HandlerMapping;
+import org.springframework.web.reactive.accept.RequestedContentTypeResolver;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.support.HandlerFunctionAdapter;
+import org.springframework.web.reactive.function.server.support.RouterFunctionMapping;
+import org.springframework.web.reactive.function.server.support.ServerResponseResultHandler;
+import org.springframework.web.reactive.result.SimpleHandlerAdapter;
 import org.springframework.web.reactive.result.method.HandlerMethodArgumentResolver;
+import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerAdapter;
+import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping;
+import org.springframework.web.reactive.result.method.annotation.ResponseBodyResultHandler;
+import org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler;
+import org.springframework.web.reactive.result.view.ViewResolutionResultHandler;
 import org.springframework.web.reactive.result.view.ViewResolver;
+import org.springframework.web.server.WebExceptionHandler;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
+import org.springframework.web.server.i18n.LocaleContextResolver;
 
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
@@ -151,9 +167,64 @@ public class FuncApplication implements Runnable, Closeable {
 	}
 
 	private void registerWebFluxAutoConfiguration() {
-		context.registerBean(WebFluxConfigurationSupport.class,
-				() -> new EnableWebFluxConfiguration(
-						context.getBean(WebFluxProperties.class)));
+		context.registerBean(EnableWebFluxConfigurationWrapper.class,
+				() -> new EnableWebFluxConfigurationWrapper(
+						new EnableWebFluxConfiguration(
+								context.getBean(WebFluxProperties.class))));
+		context.registerBean(HandlerFunctionAdapter.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.handlerFunctionAdapter());
+		context.registerBean(WebHttpHandlerBuilder.LOCALE_CONTEXT_RESOLVER_BEAN_NAME,
+				LocaleContextResolver.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.localeContextResolver());
+		context.registerBean(RequestMappingHandlerAdapter.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.requestMappingHandlerAdapter());
+		context.registerBean(RequestMappingHandlerMapping.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.requestMappingHandlerMapping());
+		context.registerBean(HandlerMapping.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.resourceHandlerMapping());
+		context.registerBean(ResponseBodyResultHandler.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.responseBodyResultHandler());
+		context.registerBean(ResponseEntityResultHandler.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.responseEntityResultHandler());
+		context.registerBean(WebExceptionHandler.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.responseStatusExceptionHandler());
+		context.registerBean(RouterFunctionMapping.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.routerFunctionMapping());
+		context.registerBean(WebHttpHandlerBuilder.SERVER_CODEC_CONFIGURER_BEAN_NAME,
+				ServerCodecConfigurer.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.serverCodecConfigurer());
+		context.registerBean(ServerResponseResultHandler.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.serverResponseResultHandler());
+		context.registerBean(SimpleHandlerAdapter.class, () -> context
+				.getBean(EnableWebFluxConfigurationWrapper.class).simpleHandlerAdapter());
+		context.registerBean(ViewResolutionResultHandler.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.viewResolutionResultHandler());
+		context.registerBean(ReactiveAdapterRegistry.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.webFluxAdapterRegistry());
+		context.registerBean(RequestedContentTypeResolver.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.webFluxContentTypeResolver());
+		context.registerBean(FormattingConversionService.class,
+				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
+						.webFluxConversionService());
+		context.registerBean(Validator.class, () -> context
+				.getBean(EnableWebFluxConfigurationWrapper.class).webFluxValidator());
+		context.registerBean(WebHttpHandlerBuilder.WEB_HANDLER_BEAN_NAME,
+				DispatcherHandler.class, () -> context
+						.getBean(EnableWebFluxConfigurationWrapper.class).webHandler());
 		context.registerBean(WebFluxConfigurer.class,
 				() -> new WebFluxConfig(context.getBean(ResourceProperties.class),
 						context.getBean(WebFluxProperties.class), context,
@@ -252,8 +323,81 @@ class EnableWebFluxConfigurationWrapper {
 	public EnableWebFluxConfigurationWrapper(EnableWebFluxConfiguration config) {
 		this.config = config;
 	}
-	
+
 	public EnableWebFluxConfiguration getConfig() {
 		return this.config;
 	}
+
+	public DispatcherHandler webHandler() {
+		return this.config.webHandler();
+	}
+
+	public WebExceptionHandler responseStatusExceptionHandler() {
+		return this.config.responseStatusExceptionHandler();
+	}
+
+	public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+		return this.config.requestMappingHandlerMapping();
+	}
+
+	public RequestedContentTypeResolver webFluxContentTypeResolver() {
+		return this.config.webFluxContentTypeResolver();
+	}
+
+	public RouterFunctionMapping routerFunctionMapping() {
+		return this.config.routerFunctionMapping();
+	}
+
+	public HandlerMapping resourceHandlerMapping() {
+		return this.config.resourceHandlerMapping();
+	}
+
+	public RequestMappingHandlerAdapter requestMappingHandlerAdapter() {
+		return this.config.requestMappingHandlerAdapter();
+	}
+
+	public FormattingConversionService webFluxConversionService() {
+		return this.config.webFluxConversionService();
+	}
+
+	public Validator webFluxValidator() {
+		return this.config.webFluxValidator();
+	}
+
+	public ServerCodecConfigurer serverCodecConfigurer() {
+		return this.config.serverCodecConfigurer();
+	}
+
+	public LocaleContextResolver localeContextResolver() {
+		return this.config.localeContextResolver();
+	}
+
+	public ReactiveAdapterRegistry webFluxAdapterRegistry() {
+		return this.config.webFluxAdapterRegistry();
+	}
+
+	public HandlerFunctionAdapter handlerFunctionAdapter() {
+		return this.config.handlerFunctionAdapter();
+	}
+
+	public SimpleHandlerAdapter simpleHandlerAdapter() {
+		return this.config.simpleHandlerAdapter();
+	}
+
+	public ResponseEntityResultHandler responseEntityResultHandler() {
+		return this.config.responseEntityResultHandler();
+	}
+
+	public ResponseBodyResultHandler responseBodyResultHandler() {
+		return this.config.responseBodyResultHandler();
+	}
+
+	public ViewResolutionResultHandler viewResolutionResultHandler() {
+		return this.config.viewResolutionResultHandler();
+	}
+
+	public ServerResponseResultHandler serverResponseResultHandler() {
+		return this.config.serverResponseResultHandler();
+	}
+
 }
