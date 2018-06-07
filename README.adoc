@@ -183,6 +183,33 @@ image::images/flame_func.svg[func]
 Note that `ConfigurationClassPostProcessor` still accounts for 15% of
 the startup time, so there is still some work to do to push that down.
 
+The `FuncApplication`
+
+== Hacking AbstractAutowureCapableBeanFactory
+
+See https://jira.spring.io/browse/SPR-16918[SPR-16918]. This little hack:
+
+```java
+//            PropertyDescriptor[] filteredPds = filterPropertyDescriptorsForDependencyCheck(
+//                    bw, mbd.allowCaching);
+            PropertyDescriptor[] filteredPds = new PropertyDescriptor[0];
+```
+
+makes things really zippy:
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.boot        ss   10  1.145 ± 0.192   s/op
+MainBenchmark.func        ss   10  0.725 ± 0.187   s/op
+MainBenchmark.isolated    ss   10  1.234 ± 0.195   s/op
+MainBenchmark.shared      ss   10  0.227 ± 0.070   s/op
+```
+
+You can even start the `FuncApplication` in 12m heap without degrading
+it. It runs in 8m but a bit slower, much slower in 8m, and fails to
+start in 4m. GC is down to 3% of startup time in the "func" sample,
+and 8% in "isolated" (the fully-leaded `DemoApplication`).
+
 == Serializable Class Metadata
 
 Using Kryo we were able to cache and re-load configuration class
