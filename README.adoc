@@ -103,6 +103,14 @@ image::images/flame_lazy.svg[lazy]
 Notice the different (thinner) profile for the right hand "rump"
 containing `ConfigurationClassPostProcessor`.
 
+There is a `MicroApplication` (no `@Configurtion` and no Spring Boot)
+that starts up very quickly. Here's a flame graph:
+
+image::images/flame_micro.svg[cpu]
+
+Note that there is very little time spent on garbage collection, and
+of course nothing from `ConfigurationClassPostProcessor`.
+
 == Ideas
 
 * Up to now the strategy has been "use ASM and cache like crazy, run

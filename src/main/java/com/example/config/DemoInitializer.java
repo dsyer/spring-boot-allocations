@@ -16,6 +16,8 @@
 
 package com.example.config;
 
+import java.lang.reflect.Field;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.FactoryBean;
@@ -27,10 +29,12 @@ import org.springframework.boot.type.classreading.ConcurrentReferenceCachingMeta
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
+import org.springframework.util.ReflectionUtils;
 
 /**
  * @author Dave Syer
@@ -42,6 +46,21 @@ public class DemoInitializer
 	@Override
 	public void initialize(ConfigurableApplicationContext context) {
 		context.addBeanFactoryPostProcessor(new SpecialPostProcessor());
+		overrideMetadataReaderFactory(context);
+	}
+
+	private void overrideMetadataReaderFactory(ConfigurableApplicationContext context) {
+		Object object = getField(context, "scanner");
+		if (object instanceof ClassPathBeanDefinitionScanner) {
+			ClassPathBeanDefinitionScanner scanner = (ClassPathBeanDefinitionScanner) object;
+			scanner.setMetadataReaderFactory(new FasterMetadataReaderFactory());
+		}
+	}
+
+	private Object getField(Object target, String name) {
+		Field field = ReflectionUtils.findField(target.getClass(), name);
+		ReflectionUtils.makeAccessible(field);
+		return ReflectionUtils.getField(field, target);
 	}
 
 }

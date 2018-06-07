@@ -15,6 +15,9 @@
  */
 package com.example.config;
 
+import java.lang.management.ManagementFactory;
+import java.util.function.Consumer;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -26,6 +29,7 @@ import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.tcp.BlockingNettyContext;
 
 /**
  * @author Dave Syer
@@ -36,8 +40,12 @@ public class ApplicationBuilder {
 	private static final String SHUTDOWN_LISTENER = "SHUTDOWN_LISTENER";
 	public static final String STARTUP = "Benchmark app started";
 	private static Log logger = LogFactory.getLog(StartupApplicationListener.class);
-
+	
 	public static void start(ConfigurableApplicationContext context) {
+		start(context, null);
+	}
+
+	public static void start(ConfigurableApplicationContext context, Consumer<BlockingNettyContext> callback) {
 		if (!hasListeners(context)) {
 			((DefaultListableBeanFactory) context.getBeanFactory())
 					.registerDisposableBean(SHUTDOWN_LISTENER,
@@ -50,9 +58,17 @@ public class ApplicationBuilder {
 		ReactorHttpHandlerAdapter adapter = new ReactorHttpHandlerAdapter(handler);
 		HttpServer httpServer = HttpServer.create("localhost",
 				context.getEnvironment().getProperty("server.port", Integer.class, 8080));
-		new Thread(() ->  {
-			httpServer.startAndAwait(adapter);
-		}).run();
+		httpServer.startAndAwait(adapter, callback(callback));
+	}
+
+	private static Consumer<BlockingNettyContext> callback(Consumer<BlockingNettyContext> callback) {
+		return context -> {
+			double uptime = ManagementFactory.getRuntimeMXBean().getUptime();
+			System.err.println("JVM running for " + uptime + "ms");
+			if (callback!=null) {
+				callback.accept(context);
+			}
+		};
 	}
 
 	private static boolean hasListeners(ConfigurableApplicationContext context) {

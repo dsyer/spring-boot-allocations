@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,36 @@
  * limitations under the License.
  */
 
-package com.example.config;
+package org.springframework.core.type.classreading;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Map;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.example.config.CopyMetadataReader;
 
 import org.springframework.boot.type.classreading.ConcurrentReferenceCachingMetadataReaderFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.type.classreading.AnnotationMetadataReadingVisitor;
-import org.springframework.core.type.classreading.MetadataReader;
+import org.springframework.util.ConcurrentReferenceHashMap;
 
-public class FasterMetadataReaderFactory
-		extends ConcurrentReferenceCachingMetadataReaderFactory {
+/**
+ * Caching implementation of the {@link MetadataReaderFactory} interface,
+ * caching a {@link MetadataReader} instance per Spring {@link Resource} handle
+ * (i.e. per ".class" file).
+ *
+ * @author Juergen Hoeller
+ * @author Costin Leau
+ * @since 2.5
+ */
+public class CachingMetadataReaderFactory extends SimpleMetadataReaderFactory {
 
 	private Kryo kryo = new Kryo();
 
@@ -43,24 +52,57 @@ public class FasterMetadataReaderFactory
 				new SimpleMetadataReaderSerializer());
 	}
 
-	public FasterMetadataReaderFactory() {
-		super();
+
+	private final Map<Resource, MetadataReader> cache = new ConcurrentReferenceHashMap<>();
+
+	/**
+	 * Create a new {@link ConcurrentReferenceCachingMetadataReaderFactory} instance for
+	 * the default class loader.
+	 */
+	public CachingMetadataReaderFactory() {
 	}
 
-	public FasterMetadataReaderFactory(ClassLoader classLoader) {
-		super(classLoader);
-	}
-
-	public FasterMetadataReaderFactory(ResourceLoader resourceLoader) {
+	/**
+	 * Create a new {@link ConcurrentReferenceCachingMetadataReaderFactory} instance for
+	 * the given resource loader.
+	 * @param resourceLoader the Spring ResourceLoader to use (also determines the
+	 * ClassLoader to use)
+	 */
+	public CachingMetadataReaderFactory(
+			ResourceLoader resourceLoader) {
 		super(resourceLoader);
 	}
 
+	/**
+	 * Create a new {@link ConcurrentReferenceCachingMetadataReaderFactory} instance for
+	 * the given class loader.
+	 * @param classLoader the ClassLoader to use
+	 */
+	public CachingMetadataReaderFactory(ClassLoader classLoader) {
+		super(classLoader);
+	}
+
 	@Override
+	public MetadataReader getMetadataReader(Resource resource) throws IOException {
+		MetadataReader metadataReader = this.cache.get(resource);
+		if (metadataReader == null) {
+			metadataReader = createMetadataReader(resource);
+			this.cache.put(resource, metadataReader);
+		}
+		return metadataReader;
+	}
+
+	/**
+	 * Create the meta-data reader.
+	 * @param resource the source resource.
+	 * @return the meta-data reader
+	 * @throws IOException on error
+	 */
 	protected MetadataReader createMetadataReader(Resource resource) throws IOException {
 		if (resource instanceof ClassPathResource) {
 			return serializableReader((ClassPathResource) resource);
 		}
-		return super.createMetadataReader(resource);
+		return super.getMetadataReader(resource);
 	}
 
 	private MetadataReader serializableReader(ClassPathResource resource) {
@@ -75,7 +117,7 @@ public class FasterMetadataReaderFactory
 		}
 		file.getParentFile().mkdirs();
 		try (Output stream = new Output(new FileOutputStream(file))) {
-			MetadataReader reader = super.createMetadataReader(resource);
+			MetadataReader reader = super.getMetadataReader(resource);
 			if (reader
 					.getAnnotationMetadata() instanceof AnnotationMetadataReadingVisitor) {
 				reader = new CopyMetadataReader((ClassPathResource) reader.getResource(),
@@ -89,7 +131,15 @@ public class FasterMetadataReaderFactory
 			throw new IllegalStateException("Could not serialize", e);
 		}
 	}
+	/**
+	 * Clear the entire MetadataReader cache, removing all cached class metadata.
+	 */
+	public void clearCache() {
+		this.cache.clear();
+	}
+
 }
+
 
 class SimpleMetadataReaderSerializer extends Serializer<ClassLoader> {
 
