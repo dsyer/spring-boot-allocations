@@ -16,7 +16,9 @@
 
 package com.example.func;
 
-import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
+import org.springframework.context.ApplicationContext;
 
 /**
  * @author Dave Syer
@@ -37,7 +39,15 @@ public class BuncApplication extends FuncApplication {
 
 	@Override
 	public void run() {
-		new SpringApplicationBuilder(FuncApplication.class).initializers(this).run();
+		SpringApplication application = new SpringApplication(BuncApplication.class) {
+			@Override
+			protected void load(ApplicationContext context, Object[] sources) {
+				// We don't want the annotation bean definition reader
+			}
+		};
+		application.addInitializers(this);
+		application.setApplicationContextClass(ReactiveWebServerApplicationContext.class);
+		application.run();
 		System.err.println(MARKER);
 	}
 

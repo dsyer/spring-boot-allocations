@@ -8,6 +8,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
 import org.springframework.boot.autoconfigure.gson.GsonAutoConfiguration;
 import org.springframework.boot.autoconfigure.gson.GsonBuilderCustomizer;
@@ -33,7 +34,7 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.client.RestTemplateCustomizer;
 import org.springframework.boot.web.codec.CodecCustomizer;
 import org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory;
-import org.springframework.boot.web.reactive.context.AnnotationConfigReactiveWebServerApplicationContext;
+import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
 import org.springframework.boot.web.reactive.error.DefaultErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
@@ -112,7 +113,7 @@ public class FuncApplication implements Runnable, Closeable, ApplicationContextI
 
 	@Override
 	public void run() {
-		AnnotationConfigReactiveWebServerApplicationContext context = new AnnotationConfigReactiveWebServerApplicationContext();
+		ReactiveWebServerApplicationContext context = new ReactiveWebServerApplicationContext();
 		initialize(context);
 		context.refresh();
 		System.err.println(MARKER);
@@ -122,10 +123,11 @@ public class FuncApplication implements Runnable, Closeable, ApplicationContextI
 	public void initialize(GenericApplicationContext context) {
 		this.context = context;
 		performPreinitialization();
+		context.registerBean(AutowiredAnnotationBeanPostProcessor.class);
 		registerDemoApplication();
 		registerWebServerFactoryCustomizerBeanPostProcessor();
 		registerConfigurationProperties();
-		// context.register(LazyInitBeanFactoryPostProcessor.class);
+		// context.registerBean(LazyInitBeanFactoryPostProcessor.class);
 		registerPropertyPlaceholderAutoConfiguration();
 		registerReactiveWebServerFactoryAutoConfiguration();
 		registerErrorWebFluxAutoConfiguration();

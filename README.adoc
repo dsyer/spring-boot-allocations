@@ -159,6 +159,25 @@ goes away but startup time is not improved.
 `LoggingApplicationListener` (2.2%) are two big differences between
 the non-Boot and Boot samples.
 
+== Hacking AbstractAutowireCapableBeanFactory
+
+See https://jira.spring.io/browse/SPR-16918[SPR-16918]. This little hack:
+
+```java
+//            PropertyDescriptor[] filteredPds = filterPropertyDescriptorsForDependencyCheck(
+//                    bw, mbd.allowCaching);
+            PropertyDescriptor[] filteredPds = new PropertyDescriptor[0];
+```
+
+makes things really zippy:
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.isolated    ss   10  1.234 ± 0.195   s/op
+MainBenchmark.boot        ss   10  1.145 ± 0.192   s/op
+MainBenchmark.shared      ss   10  0.227 ± 0.070   s/op
+```
+
 == Functional Bean Registration
 
 Getting rid of as much `@Configuration` as possible would give us a
@@ -170,8 +189,8 @@ Benchmark               Mode  Cnt  Score   Error  Units
 MainBenchmark.isolated    ss   10  1.205 ± 0.262   s/op
 MainBenchmark.boot        ss   10  1.210 ± 0.229   s/op
 MainBenchmark.manual      ss   10  1.235 ± 0.180   s/op
-MainBenchmark.bunc        ss   10  0.760 ± 0.146   s/op
-MainBenchmark.func        ss   10  0.641 ± 0.135   s/op
+MainBenchmark.bunc        ss   10  0.671 ± 0.140   s/op
+MainBenchmark.func        ss   10  0.579 ± 0.163   s/op
 ```
 
 * "isolated" is the canonical `DemoApplication` with `@SpringBootApplication`.
@@ -195,7 +214,7 @@ Some of the `@Configuration` beans are hard to use without registering
 them as beans
 (e.g. `WebFluxAutoConfiguration.EnableWebFluxConfiguration`). If you
 do register a `@Configuration` manually (not using `@Import` or
-`@ComponentScan`) there is still some post processing and relective
+`@ComponentScan`) there is still some post processing and reflective
 calling of `@Bean` methods etc., but the CGLib proxy is skipped (might
 have side effects, so probably not a good idea in general).
 
@@ -203,8 +222,15 @@ Here's a flame graph from the "func" sample:
 
 image::images/flame_func.svg[func]
 
-Note that `ConfigurationClassPostProcessor` still accounts for 6% of
-the startup time, so there is still some work to do to push that down.
+Note that `ConfigurationClassPostProcessor` is not used at all. If it
+was it would still account for 6% of the startup time because it
+inspects every bean in the context, even though there we know there
+are no `@Configuration` classes. To achieve this extra optimization
+the user has to ensure that the application context is not one of the
+annotation register implementations
+(e.g. `ReactiveWebServerApplicationContext` instead of
+`AnnotationConfigReactiveWebServerApplicationContext`) but also that
+it does register an `AutowiredAnnotationBeanPostProcessor`.
 
 The biggest flame on the "func" app graph was
 `@ConfigurationProperties` processing (9%), but most of that was
@@ -230,28 +256,8 @@ makes quite a big difference:
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
 MainBenchmark.isolated    ss   10  1.173 ± 0.209   s/op
-MainBenchmark.boot        ss   10  1.184 ± 0.186   s/op
+MainBenchmark.boot        ss   10  1.110 ± 0.214   s/op
 MainBenchmark.manual      ss   10  1.016 ± 0.183   s/op
-```
-
-== Hacking AbstractAutowireCapableBeanFactory
-
-See https://jira.spring.io/browse/SPR-16918[SPR-16918]. This little hack:
-
-```java
-//            PropertyDescriptor[] filteredPds = filterPropertyDescriptorsForDependencyCheck(
-//                    bw, mbd.allowCaching);
-            PropertyDescriptor[] filteredPds = new PropertyDescriptor[0];
-```
-
-makes things really zippy:
-
-```
-Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.boot        ss   10  1.145 ± 0.192   s/op
-MainBenchmark.func        ss   10  0.725 ± 0.187   s/op
-MainBenchmark.isolated    ss   10  1.234 ± 0.195   s/op
-MainBenchmark.shared      ss   10  0.227 ± 0.070   s/op
 ```
 
 You can even start the `FuncApplication` in 12m heap without degrading
@@ -262,8 +268,9 @@ and 8% in "isolated" (the fully-leaded `DemoApplication`).
 With the `LazyInitBeanFactoryPostProcessor`:
 
 ```
-Benchmark           Mode  Cnt  Score   Error  Units
-MainBenchmark.func    ss   10  0.590 ± 0.129   s/op
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.bunc        ss   10  0.653 ± 0.154   s/op
+MainBenchmark.func        ss   10  0.523 ± 0.132   s/op
 ```
 
 == Serializable Class Metadata

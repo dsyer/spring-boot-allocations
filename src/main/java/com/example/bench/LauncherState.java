@@ -30,7 +30,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.springframework.beans.CachedIntrospectionResults;
 import org.springframework.util.ClassUtils;
 
 @State(Scope.Benchmark)
@@ -89,7 +88,7 @@ public class LauncherState implements Runnable, Closeable {
 	@Override
 	@TearDown(Level.Invocation)
 	public void close() throws IOException {
-		CachedIntrospectionResults.clearClassLoader(getClass().getClassLoader());
+		// CachedIntrospectionResults.clearClassLoader(getClass().getClassLoader());
 		if (instance != null) {
 			instance.close();
 		}
