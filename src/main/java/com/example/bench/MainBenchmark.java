@@ -17,6 +17,7 @@ package com.example.bench;
 
 import com.example.boot.BootApplication;
 import com.example.func.FuncApplication;
+import com.example.manual.ManualApplication;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -45,6 +46,12 @@ public class MainBenchmark {
 	@Benchmark
 	public void boot(LauncherState state) throws Exception {
 		state.setMainClass(BootApplication.class);
+		state.isolated();
+	}
+
+	@Benchmark
+	public void manual(LauncherState state) throws Exception {
+		state.setMainClass(ManualApplication.class);
 		state.isolated();
 	}
 

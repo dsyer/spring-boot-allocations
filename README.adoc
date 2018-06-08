@@ -147,9 +147,13 @@ needs to know is "Does `@Component` have `@Inherited`?" it seems.
 
 * `MimeTypeUtils` has a `SecureRandom` and it is used by WebFlux to
 initialize a codec, which is pretty fundamental, but takes 1.4% of
-startup time in the fastest app. Setting `
--Djava.security.egd=file:/dev/./urandom` doesn't help.
+startup time in the fastest app. Setting
+`-Djava.security.egd=file:/dev/./urandom` doesn't help.
 
+* `DispatcherHandler` eagerly initializes a bunch of stuff (handler
+mappings etc.) which is the biggest part of the WebFlux startup
+flame. It doesn't seem to help much to make it lazy though - the flame
+goes away but startup time is not improved.
 
 == Functional Bean Registration
 
@@ -162,7 +166,7 @@ Benchmark               Mode  Cnt  Score   Error  Units
 MainBenchmark.isolated    ss   10  1.373 ± 0.192   s/op
 MainBenchmark.boot        ss   10  1.309 ± 0.216   s/op
 MainBenchmark.manual      ss   10  1.235 ± 0.180   s/op
-MainBenchmark.func        ss   10  0.699 ± 0.196   s/op
+MainBenchmark.func        ss   10  0.641 ± 0.135   s/op
 ```
 
 * "isolated" is the canonical `DemoApplication` with `@SpringBootApplication`.
@@ -193,9 +197,29 @@ image::images/flame_func.svg[func]
 Note that `ConfigurationClassPostProcessor` still accounts for 6% of
 the startup time, so there is still some work to do to push that down.
 
+The biggest flame on the "func" app graph was
+`@ConfigurationProperties` processing (9%), but most of that was
+initializing the conversion service, which is done in a background
+thread in a Boot app. The timing shown above puts it in a background
+thread (saving about 50ms).
+
 We suspect that the difference between "isolated" (vanilla) and "boot"
 is condition processing, and that string manipulation can be removed
 or optimized in Boot to reduce or eliminate that.
+
+The biggest flame in the "boot" graph that isn't in the "manual" one
+is from `BackgroundPreinitializer`. That's in a background thread, so
+it isn't obviously going to slow down the startup, but if it causes
+extra GC pressure, in particular that could be bad. See
+https://github.com/spring-projects/spring-boot/issues/13423[spring-boot#1423]. It
+makes quite a big difference:
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.isolated    ss   10  1.173 ± 0.209   s/op
+MainBenchmark.boot        ss   10  1.184 ± 0.186   s/op
+MainBenchmark.manual      ss   10  1.016 ± 0.183   s/op
+```
 
 == Hacking AbstractAutowireCapableBeanFactory
 

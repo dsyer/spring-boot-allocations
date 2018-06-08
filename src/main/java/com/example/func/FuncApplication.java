@@ -45,6 +45,7 @@ import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.ReactiveAdapterRegistry;
+import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.format.support.FormattingConversionService;
 import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -118,6 +119,7 @@ public class FuncApplication implements Runnable, Closeable {
 	private ConfigurableApplicationContext create() {
 		AnnotationConfigReactiveWebServerApplicationContext context = new AnnotationConfigReactiveWebServerApplicationContext();
 		this.context = context;
+		performPreinitialization();
 		registerDemoApplication();
 		registerWebServerFactoryCustomizerBeanPostProcessor();
 		registerConfigurationProperties();
@@ -136,6 +138,31 @@ public class FuncApplication implements Runnable, Closeable {
 		return context;
 	}
 
+	private void performPreinitialization() {
+		try {
+			Thread thread = new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					runSafely(() -> new DefaultFormattingConversionService());
+				}
+
+				public void runSafely(Runnable runnable) {
+					try {
+						runnable.run();
+					}
+					catch (Throwable ex) {
+						// Ignore
+					}
+				}
+
+			}, "background-preinit");
+			thread.start();
+		}
+		catch (Exception ex) {
+		}
+	}
+	
 	private void registerConfigurationProperties() {
 		context.registerBean(ConfigurationBeanFactoryMetadata.BEAN_NAME,
 				ConfigurationBeanFactoryMetadata.class,
