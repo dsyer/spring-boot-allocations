@@ -163,8 +163,8 @@ precisely. Here are some results:
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.373 ± 0.192   s/op
-MainBenchmark.boot        ss   10  1.309 ± 0.216   s/op
+MainBenchmark.isolated    ss   10  1.205 ± 0.262   s/op
+MainBenchmark.boot        ss   10  1.210 ± 0.229   s/op
 MainBenchmark.manual      ss   10  1.235 ± 0.180   s/op
 MainBenchmark.func        ss   10  0.641 ± 0.135   s/op
 ```
@@ -205,7 +205,11 @@ thread (saving about 50ms).
 
 We suspect that the difference between "isolated" (vanilla) and "boot"
 is condition processing, and that string manipulation can be removed
-or optimized in Boot to reduce or eliminate that.
+or optimized in Boot to reduce or eliminate that. Attempting to
+collect evidence for this has so far failed. E.g. using this
+https://github.com/wilkinsona/spring-boot/tree/empty-condition-messages[branch
+of Spring Boot] didn't have much impact on any but the "boot" sample
+(it should have improved the "isolated" sample as much or more).
 
 The biggest flame in the "boot" graph that isn't in the "manual" one
 is from `BackgroundPreinitializer`. That's in a background thread, so
@@ -242,7 +246,7 @@ MainBenchmark.shared      ss   10  0.227 ± 0.070   s/op
 ```
 
 You can even start the `FuncApplication` in 12m heap without degrading
-it. It runs in 8m but a bit slower, much slower in 8m, and fails to
+it. It runs in 8m but a bit slower, much slower in 6m, and fails to
 start in 4m. GC is down to 3% of startup time in the "func" sample,
 and 8% in "isolated" (the fully-leaded `DemoApplication`).
 
@@ -250,7 +254,7 @@ With the `LazyInitBeanFactoryPostProcessor`:
 
 ```
 Benchmark           Mode  Cnt  Score   Error  Units
-MainBenchmark.func    ss   10  0.629 ± 0.179   s/op
+MainBenchmark.func    ss   10  0.590 ± 0.129   s/op
 ```
 
 == Serializable Class Metadata
