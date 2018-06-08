@@ -15,7 +15,6 @@
  */
 package com.example.bench;
 
-import com.example.config.FasterMetadataReaderFactory;
 import com.example.demo.DemoApplication;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -47,11 +46,6 @@ public class MetadataBenchmark {
 	}
 
 	@Benchmark
-	public void kryo(KryoState state) throws Exception {
-		state.run();
-	}
-
-	@Benchmark
 	public void reference(ReferenceState state) throws Exception {
 		state.run();
 	}
@@ -59,13 +53,6 @@ public class MetadataBenchmark {
 	@Benchmark
 	public void simple(SimpleState state) throws Exception {
 		state.run();
-	}
-
-	@State(Scope.Thread)
-	public static class KryoState extends MetadataState {
-		protected MetadataReaderFactory createFactory() {
-			return new FasterMetadataReaderFactory();
-		}
 	}
 
 	@State(Scope.Thread)

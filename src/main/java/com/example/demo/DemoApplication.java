@@ -44,7 +44,6 @@ public class DemoApplication implements Runnable, Closeable {
 	@Override
 	public void run() {
 		context = new SpringApplicationBuilder(DemoApplication.class)
-				// .initializers(new MetadataReaderInitializer())
 				.run("--server.port=0", "--spring.jmx.enabled=false");
 	}
 
