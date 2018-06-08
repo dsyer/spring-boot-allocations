@@ -82,7 +82,8 @@ import static org.springframework.web.reactive.function.server.ServerResponse.ok
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
-public class FuncApplication implements Runnable, Closeable, ApplicationContextInitializer<GenericApplicationContext> {
+public class FuncApplication implements Runnable, Closeable,
+		ApplicationContextInitializer<GenericApplicationContext> {
 
 	public static final String MARKER = "Benchmark app started";
 
@@ -164,7 +165,7 @@ public class FuncApplication implements Runnable, Closeable, ApplicationContextI
 		catch (Exception ex) {
 		}
 	}
-	
+
 	private void registerConfigurationProperties() {
 		context.registerBean(ConfigurationBeanFactoryMetadata.BEAN_NAME,
 				ConfigurationBeanFactoryMetadata.class,

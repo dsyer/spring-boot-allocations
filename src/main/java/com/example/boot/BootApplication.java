@@ -81,7 +81,8 @@ public class BootApplication implements Runnable, Closeable,
 		context.registerBean(RouterFunction.class, () -> userEndpoints());
 	}
 
-	@Import({ PropertyPlaceholderAutoConfiguration.class,
+	@Import({ // LazyInitBeanFactoryPostProcessor.class,
+			PropertyPlaceholderAutoConfiguration.class,
 			ReactiveWebServerFactoryAutoConfiguration.class,
 			CodecsAutoConfiguration.class, ErrorWebFluxAutoConfiguration.class,
 			WebFluxAutoConfiguration.class, HttpHandlerAutoConfiguration.class,

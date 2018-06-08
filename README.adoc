@@ -109,8 +109,8 @@ reading. It always shows up in the flame graphs.
 stick generally. Worth a look.
 
 * Webflux is the other big hog in the simple demo application, after
-from `@Configuration` (Netty itself is relatively fast). Maybe that
-can be streamlined as well?
+`@Configuration` (Netty itself is relatively fast). Maybe that can be
+streamlined as well?
 
 Sifting through some flame graphs and other hints and data points, we
 came to the conclusion that there are maybe 3 areas that are worth
@@ -186,21 +186,22 @@ precisely. Here are some results:
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.205 ± 0.262   s/op
-MainBenchmark.boot        ss   10  1.210 ± 0.229   s/op
-MainBenchmark.manual      ss   10  1.235 ± 0.180   s/op
-MainBenchmark.bunc        ss   10  0.671 ± 0.140   s/op
-MainBenchmark.func        ss   10  0.579 ± 0.163   s/op
+MainBenchmark.isolated    ss   10  1.156 ± 0.203   s/op
+MainBenchmark.boot        ss   10  1.115 ± 0.210   s/op
+MainBenchmark.manual      ss   10  1.068 ± 0.185   s/op
+MainBenchmark.bunc        ss   10  0.683 ± 0.147   s/op
+MainBenchmark.func        ss   10  0.573 ± 0.149   s/op
+MainBenchmark.shared      ss   10  0.219 ± 0.070   s/op
 ```
 
 * "isolated" is the canonical `DemoApplication` with `@SpringBootApplication`.
 
 * "boot" uses `SpringApplication` but not
-`@EnableAutoConfiguration`. It is a bit quicker (70ms or 5%). The
+`@EnableAutoConfiguration`. It is a bit quicker (40ms or 4%). The
 flame graph for this one has much less GC activity.
 
 * "manual" is the same but gets rid of `SpringApplication`. Another
-70ms improvement.
+50ms improvement.
 
 * "bunc" registers all beans in the application directly, by class or
 using the functional bean registration API. It uses
@@ -251,14 +252,8 @@ is from `BackgroundPreinitializer`. That's in a background thread, so
 it isn't obviously going to slow down the startup, but if it causes
 extra GC pressure, in particular that could be bad. See
 https://github.com/spring-projects/spring-boot/issues/13423[spring-boot#1423]. It
-makes quite a big difference:
-
-```
-Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.173 ± 0.209   s/op
-MainBenchmark.boot        ss   10  1.110 ± 0.214   s/op
-MainBenchmark.manual      ss   10  1.016 ± 0.183   s/op
-```
+makes quite a big difference (about 60ms). The data above already
+include this improvement.
 
 You can even start the `FuncApplication` in 12m heap without degrading
 it. It runs in 8m but a bit slower, much slower in 6m, and fails to
