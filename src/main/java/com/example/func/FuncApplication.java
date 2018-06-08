@@ -27,7 +27,8 @@ import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfigurat
 import org.springframework.boot.autoconfigure.web.reactive.WebFluxProperties;
 import org.springframework.boot.autoconfigure.web.reactive.error.ErrorWebFluxAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.context.properties.ConfigurationBeanFactoryMetadata;
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.client.RestTemplateCustomizer;
 import org.springframework.boot.web.codec.CodecCustomizer;
@@ -37,9 +38,9 @@ import org.springframework.boot.web.reactive.error.DefaultErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.boot.web.reactive.function.client.WebClientCustomizer;
+import org.springframework.boot.web.server.WebServerFactoryCustomizerBeanPostProcessor;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.ParameterizedTypeReference;
@@ -118,7 +119,8 @@ public class FuncApplication implements Runnable, Closeable {
 		AnnotationConfigReactiveWebServerApplicationContext context = new AnnotationConfigReactiveWebServerApplicationContext();
 		this.context = context;
 		registerDemoApplication();
-		context.register(PropertiesConfiguration.class);
+		registerWebServerFactoryCustomizerBeanPostProcessor();
+		registerConfigurationProperties();
 		// context.register(LazyInitBeanFactoryPostProcessor.class);
 		registerPropertyPlaceholderAutoConfiguration();
 		registerReactiveWebServerFactoryAutoConfiguration();
@@ -132,6 +134,28 @@ public class FuncApplication implements Runnable, Closeable {
 		registerWebClientAutoConfiguration();
 		context.refresh();
 		return context;
+	}
+
+	private void registerConfigurationProperties() {
+		context.registerBean(ConfigurationBeanFactoryMetadata.BEAN_NAME,
+				ConfigurationBeanFactoryMetadata.class,
+				() -> new ConfigurationBeanFactoryMetadata());
+		context.registerBean(ConfigurationPropertiesBindingPostProcessor.BEAN_NAME,
+				ConfigurationPropertiesBindingPostProcessor.class,
+				() -> new ConfigurationPropertiesBindingPostProcessor());
+		context.registerBean(ServerProperties.class, () -> new ServerProperties());
+		context.registerBean(ResourceProperties.class, () -> new ResourceProperties());
+		context.registerBean(WebFluxProperties.class, () -> new WebFluxProperties());
+		context.registerBean(GsonProperties.class, () -> new GsonProperties());
+		context.registerBean(HttpEncodingProperties.class,
+				() -> new HttpEncodingProperties());
+		context.registerBean(ReactorCoreProperties.class,
+				() -> new ReactorCoreProperties());
+	}
+
+	private void registerWebServerFactoryCustomizerBeanPostProcessor() {
+		context.registerBean("webServerFactoryCustomizerBeanPostProcessor",
+				WebServerFactoryCustomizerBeanPostProcessor.class);
 	}
 
 	private void registerPropertyPlaceholderAutoConfiguration() {
@@ -295,14 +319,6 @@ public class FuncApplication implements Runnable, Closeable {
 					new BeanFactoryListProvider<>(context, WebClientCustomizer.class));
 			return config.webClientBuilder();
 		});
-	}
-
-	@EnableConfigurationProperties({ ServerProperties.class, ResourceProperties.class,
-			WebFluxProperties.class, GsonProperties.class, HttpEncodingProperties.class,
-			ReactorCoreProperties.class })
-	@Import({
-			ReactiveWebServerFactoryAutoConfiguration.BeanPostProcessorsRegistrar.class })
-	public static class PropertiesConfiguration {
 	}
 
 }

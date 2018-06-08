@@ -152,7 +152,7 @@ Benchmark               Mode  Cnt  Score   Error  Units
 MainBenchmark.isolated    ss   10  1.373 ± 0.192   s/op
 MainBenchmark.boot        ss   10  1.309 ± 0.216   s/op
 MainBenchmark.manual      ss   10  1.235 ± 0.180   s/op
-MainBenchmark.func        ss   10  0.858 ± 0.138   s/op
+MainBenchmark.func        ss   10  0.699 ± 0.196   s/op
 ```
 
 * "isolated" is the canonical `DemoApplication` with `@SpringBootApplication`.
@@ -164,7 +164,7 @@ flame graph for this one has much less GC activity.
 * "manual" is the same but gets rid of `SpringApplication`. Another
 70ms improvement.
 
-* "func" registers as many as possible of the beans in the application
+* "func" registers all beans in the application directly, by class or
 using the functional bean registration API. Results are pretty good
 (first sample under 1000ms).
 
