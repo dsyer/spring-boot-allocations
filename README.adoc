@@ -155,6 +155,10 @@ mappings etc.) which is the biggest part of the WebFlux startup
 flame. It doesn't seem to help much to make it lazy though - the flame
 goes away but startup time is not improved.
 
+* `ConfigFileApplicationListener` (5.5%) and
+`LoggingApplicationListener` (2.2%) are two big differences between
+the non-Boot and Boot samples.
+
 == Functional Bean Registration
 
 Getting rid of as much `@Configuration` as possible would give us a
@@ -166,6 +170,7 @@ Benchmark               Mode  Cnt  Score   Error  Units
 MainBenchmark.isolated    ss   10  1.205 ± 0.262   s/op
 MainBenchmark.boot        ss   10  1.210 ± 0.229   s/op
 MainBenchmark.manual      ss   10  1.235 ± 0.180   s/op
+MainBenchmark.bunc        ss   10  0.760 ± 0.146   s/op
 MainBenchmark.func        ss   10  0.641 ± 0.135   s/op
 ```
 
@@ -178,9 +183,13 @@ flame graph for this one has much less GC activity.
 * "manual" is the same but gets rid of `SpringApplication`. Another
 70ms improvement.
 
-* "func" registers all beans in the application directly, by class or
-using the functional bean registration API. Results are pretty good
-(first sample under 1000ms).
+* "bunc" registers all beans in the application directly, by class or
+using the functional bean registration API. It uses
+`SpringApplication` (so all of Boot except autoconfig, basically).
+
+* "func" creates the application context by hand, forgoing the
+benefits of Spring Boot. Results are pretty good (first sample under
+1000ms).
 
 Some of the `@Configuration` beans are hard to use without registering
 them as beans

@@ -39,7 +39,7 @@ import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.boot.web.reactive.function.client.WebClientCustomizer;
 import org.springframework.boot.web.server.WebServerFactoryCustomizerBeanPostProcessor;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
@@ -81,7 +81,7 @@ import static org.springframework.web.reactive.function.server.ServerResponse.ok
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
-public class FuncApplication implements Runnable, Closeable {
+public class FuncApplication implements Runnable, Closeable, ApplicationContextInitializer<GenericApplicationContext> {
 
 	public static final String MARKER = "Benchmark app started";
 
@@ -112,12 +112,14 @@ public class FuncApplication implements Runnable, Closeable {
 
 	@Override
 	public void run() {
-		create();
+		AnnotationConfigReactiveWebServerApplicationContext context = new AnnotationConfigReactiveWebServerApplicationContext();
+		initialize(context);
+		context.refresh();
 		System.err.println(MARKER);
 	}
 
-	private ConfigurableApplicationContext create() {
-		AnnotationConfigReactiveWebServerApplicationContext context = new AnnotationConfigReactiveWebServerApplicationContext();
+	@Override
+	public void initialize(GenericApplicationContext context) {
 		this.context = context;
 		performPreinitialization();
 		registerDemoApplication();
@@ -134,8 +136,6 @@ public class FuncApplication implements Runnable, Closeable {
 		registerReactorCoreAutoConfiguration();
 		registerRestTemplateAutoConfiguration();
 		registerWebClientAutoConfiguration();
-		context.refresh();
-		return context;
 	}
 
 	private void performPreinitialization() {
