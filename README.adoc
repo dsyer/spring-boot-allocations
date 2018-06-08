@@ -273,6 +273,33 @@ MainBenchmark.bunc        ss   10  0.653 ± 0.154   s/op
 MainBenchmark.func        ss   10  0.523 ± 0.132   s/op
 ```
 
+In all 17 beans are not created in "bunc" on startup, compared to when
+the lazy processor is not registered:
+
+```
+com.example.func.ReactorConfiguration
+com.google.gson.Gson
+com.google.gson.GsonBuilder
+org.springframework.boot.autoconfigure.gson.GsonBuilderCustomizer
+org.springframework.boot.autoconfigure.gson.GsonProperties
+org.springframework.boot.autoconfigure.http.HttpEncodingProperties
+org.springframework.boot.autoconfigure.http.HttpMessageConverters
+org.springframework.boot.autoconfigure.reactor.core.ReactorCoreProperties
+org.springframework.boot.web.client.RestTemplateBuilder
+org.springframework.core.ReactiveAdapterRegistry
+org.springframework.format.support.FormattingConversionService
+org.springframework.http.converter.StringHttpMessageConverter
+org.springframework.http.converter.json.GsonHttpMessageConverter
+org.springframework.validation.Validator
+org.springframework.web.reactive.accept.RequestedContentTypeResolver
+org.springframework.web.reactive.config.WebFluxConfigurer
+org.springframework.web.reactive.function.client.WebClient$Builder
+```
+
+Some of those might be needed if a JSON request was ever processed (it
+won't be in this app). Some will never be needed
+(e.g. `RestTemplateBuilder`).
+
 == Serializable Class Metadata
 
 Using Kryo we were able to cache and re-load configuration class
