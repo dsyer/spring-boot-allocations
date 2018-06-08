@@ -119,6 +119,7 @@ public class FuncApplication implements Runnable, Closeable {
 		this.context = context;
 		registerDemoApplication();
 		context.register(PropertiesConfiguration.class);
+		// context.register(LazyInitBeanFactoryPostProcessor.class);
 		registerPropertyPlaceholderAutoConfiguration();
 		registerReactiveWebServerFactoryAutoConfiguration();
 		registerErrorWebFluxAutoConfiguration();

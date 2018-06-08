@@ -182,10 +182,12 @@ image::images/flame_func.svg[func]
 
 Note that `ConfigurationClassPostProcessor` still accounts for 15% of
 the startup time, so there is still some work to do to push that down.
+(This number is already lower, maybe 8%, in latest results because
+some more `@Configuration` was pushed down to functions.)
 
 The `FuncApplication`
 
-== Hacking AbstractAutowureCapableBeanFactory
+== Hacking AbstractAutowireCapableBeanFactory
 
 See https://jira.spring.io/browse/SPR-16918[SPR-16918]. This little hack:
 
@@ -209,6 +211,13 @@ You can even start the `FuncApplication` in 12m heap without degrading
 it. It runs in 8m but a bit slower, much slower in 8m, and fails to
 start in 4m. GC is down to 3% of startup time in the "func" sample,
 and 8% in "isolated" (the fully-leaded `DemoApplication`).
+
+With the `LazyInitBeanFactoryPostProcessor`:
+
+```
+Benchmark           Mode  Cnt  Score   Error  Units
+MainBenchmark.func    ss   10  0.629 ± 0.179   s/op
+```
 
 == Serializable Class Metadata
 
