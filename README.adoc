@@ -105,7 +105,7 @@ it's not minute either.
 * `ConfigurationClassPostProcessor` does a lot of imports and metadata
 reading. It always shows up in the flame graphs.
 
-* CGILib: might not be slow at all actually, but it comes in for some
+* CGLib: might not be slow at all actually, but it comes in for some
 stick generally. Worth a look.
 
 * Webflux is the other big hog in the simple demo application, after
@@ -140,6 +140,16 @@ could be replaced.
 
 * Also Spring Boot condition messages create strings and concatenate
 them even if they might never be used. this shows up a GC churn.
+
+* `AnnotationTypeFilter` looks like another potential
+optimization. It's >1% of startup time in the fastest app, and all it
+needs to know is "Does `@Component` have `@Inherited`?" it seems.
+
+* `MimeTypeUtils` has a `SecureRandom` and it is used by WebFlux to
+initialize a codec, which is pretty fundamental, but takes 1.4% of
+startup time in the fastest app. Setting `
+-Djava.security.egd=file:/dev/./urandom` doesn't help.
+
 
 == Functional Bean Registration
 
@@ -180,12 +190,12 @@ Here's a flame graph from the "func" sample:
 
 image::images/flame_func.svg[func]
 
-Note that `ConfigurationClassPostProcessor` still accounts for 15% of
+Note that `ConfigurationClassPostProcessor` still accounts for 6% of
 the startup time, so there is still some work to do to push that down.
-(This number is already lower, maybe 8%, in latest results because
-some more `@Configuration` was pushed down to functions.)
 
-The `FuncApplication`
+We suspect that the difference between "isolated" (vanilla) and "boot"
+is condition processing, and that string manipulation can be removed
+or optimized in Boot to reduce or eliminate that.
 
 == Hacking AbstractAutowireCapableBeanFactory
 
