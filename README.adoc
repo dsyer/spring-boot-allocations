@@ -71,11 +71,14 @@ Download the https://github.com/jvm-profiling-tools/async-profiler[profiler] and
 > HINT: you can click on the flames to zoom in on the stack above
 > where you click.
 
-image::images/flame_vanilla.svg[thread]
+[cols="50a,50a"]
+|===
+|image::images/flame_vanilla.svg[thread]
+|image::images/flame_lazee.svg[lazy]
 
-Same but with the `LazyInitBeanFactoryPostProcessor`:
-
-image::images/flame_lazee.svg[lazy]
+| Vanilla demo app
+| Same but with the `LazyInitBeanFactoryPostProcessor`
+|===
 
 Notice the different (thinner) profile for the right hand "rump"
 containing `ConfigurationClassPostProcessor`.
@@ -83,7 +86,7 @@ containing `ConfigurationClassPostProcessor`.
 There is a `MicroApplication` (no `@Configuration` and no Spring Boot)
 that starts up very quickly. Here's a flame graph:
 
-image::images/flame_micro.svg[cpu]
+image::images/flame_micro.svg[cpu,width=50%]
 
 Note that there is very little time spent on garbage collection, and
 of course nothing from `ConfigurationClassPostProcessor`.
@@ -226,7 +229,7 @@ have side effects, so probably not a good idea in general).
 
 Here's a flame graph from the "func" sample:
 
-image::images/flame_func.svg[func]
+image::images/flame_func.svg[func,width=50%]
 
 Note that `ConfigurationClassPostProcessor` is not used at all. If it
 was it would still account for 6% of the startup time because it
@@ -368,7 +371,7 @@ MainBenchmark.shared      ss   10  0.264 ± 0.075   s/op
 
 Flame graphs with `alloc=cpu`, with the cache:
 
-image::images/flame_cached.svg[cpu_cached]
+image::images/flame_cached.svg[cpu_cached,width=50%]
 
 Notice the large fraction of the samples in `GCTaskThread::run`
 (19.47% of the total startup time). These graphs were generated using
