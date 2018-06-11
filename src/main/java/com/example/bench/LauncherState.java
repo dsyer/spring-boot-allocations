@@ -58,6 +58,7 @@ public class LauncherState implements Runnable, Closeable {
 	@Setup(Level.Trial)
 	public void start() throws Exception {
 		System.setProperty("server.port", "0");
+		System.setProperty("spring.config.location", "file:./src/mian/resources/application.properties");
 	}
 	
 	public void shared() throws Exception {

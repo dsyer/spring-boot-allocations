@@ -34,7 +34,7 @@ import org.openjdk.jmh.annotations.Warmup;
 public class MainBenchmark {
 
 	@Benchmark
-	public void isolated(LauncherState state) throws Exception {
+	public void demo(LauncherState state) throws Exception {
 		state.isolated();
 	}
 

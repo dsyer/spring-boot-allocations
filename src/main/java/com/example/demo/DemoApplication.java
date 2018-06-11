@@ -44,7 +44,7 @@ public class DemoApplication implements Runnable, Closeable {
 	@Override
 	public void run() {
 		context = new SpringApplicationBuilder(DemoApplication.class)
-				.run("--server.port=0", "--spring.jmx.enabled=false");
+				.properties("--server.port=0", "--spring.jmx.enabled=false").run();
 	}
 
 }

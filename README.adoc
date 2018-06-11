@@ -2,11 +2,11 @@ Laptop results:
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.305 ± 0.162   s/op
+MainBenchmark.demo    ss   10  1.305 ± 0.162   s/op
 MainBenchmark.shared      ss   10  0.257 ± 0.094   s/op
 ```
 
-* "isolated" means a new class loader per application context (so all
+* "demo" creates a new class loader per application context (so all
 the Spring metadata has to be read again because caches get cleared).
 * "shared" means the same class loader for all contexts. In principal
 this is as fast as we can ever go (things will always be a bit slower
@@ -16,7 +16,7 @@ Without `spring.components`:
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.331 ± 0.145   s/op
+MainBenchmark.demo    ss   10  1.331 ± 0.145   s/op
 MainBenchmark.shared      ss   10  0.290 ± 0.072   s/op
 ```
 
@@ -27,7 +27,7 @@ With `LazyInitBeanFactoryPostProcessor` (quite a useful boost):
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.197 ± 0.188   s/op
+MainBenchmark.demo    ss   10  1.197 ± 0.188   s/op
 MainBenchmark.shared      ss   10  0.226 ± 0.067   s/op
 ```
 
@@ -37,7 +37,7 @@ Vanilla:
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  0.768 ± 0.110   s/op
+MainBenchmark.demo    ss   10  0.768 ± 0.110   s/op
 MainBenchmark.shared      ss   10  0.159 ± 0.048   s/op
 ```
 
@@ -45,7 +45,7 @@ and with `LazyInitBeanFactoryPostProcessor`:
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  0.696 ± 0.068   s/op
+MainBenchmark.demo    ss   10  0.696 ± 0.068   s/op
 MainBenchmark.shared      ss   10  0.131 ± 0.024   s/op
 ```
 
@@ -173,10 +173,15 @@ makes things really zippy:
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.234 ± 0.195   s/op
+MainBenchmark.demo    ss   10  1.234 ± 0.195   s/op
 MainBenchmark.boot        ss   10  1.145 ± 0.192   s/op
 MainBenchmark.shared      ss   10  0.227 ± 0.070   s/op
 ```
+
+With that change and some other minor tweaks (see below), you can run
+the vanilla `DemoApplication` in 8m of heap (it starts a bit slowly
+but runs fine). With 12m heap you see a lot more GC logged, but it
+isn't much slower.
 
 == Functional Bean Registration
 
@@ -186,7 +191,7 @@ precisely. Here are some results:
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.156 ± 0.203   s/op
+MainBenchmark.demo    ss   10  1.156 ± 0.203   s/op
 MainBenchmark.boot        ss   10  1.115 ± 0.210   s/op
 MainBenchmark.manual      ss   10  1.068 ± 0.185   s/op
 MainBenchmark.bunc        ss   10  0.683 ± 0.147   s/op
@@ -194,7 +199,7 @@ MainBenchmark.func        ss   10  0.573 ± 0.149   s/op
 MainBenchmark.shared      ss   10  0.219 ± 0.070   s/op
 ```
 
-* "isolated" is the canonical `DemoApplication` with `@SpringBootApplication`.
+* "demo" is the canonical `DemoApplication` with `@SpringBootApplication`.
 
 * "boot" uses `SpringApplication` but not
 `@EnableAutoConfiguration`. It is a bit quicker (40ms or 4%). The
@@ -239,13 +244,13 @@ initializing the conversion service, which is done in a background
 thread in a Boot app. The timing shown above puts it in a background
 thread (saving about 50ms).
 
-We suspect that the difference between "isolated" (vanilla) and "boot"
+We suspect that the difference between "demo" (vanilla) and "boot"
 is condition processing, and that string manipulation can be removed
 or optimized in Boot to reduce or eliminate that. Attempting to
 collect evidence for this has so far failed. E.g. using this
 https://github.com/wilkinsona/spring-boot/tree/empty-condition-messages[branch
 of Spring Boot] didn't have much impact on any but the "boot" sample
-(it should have improved the "isolated" sample as much or more).
+(it should have improved the "demo" sample as much or more).
 
 The biggest flame in the "boot" graph that isn't in the "manual" one
 is from `BackgroundPreinitializer`. That's in a background thread, so
@@ -258,7 +263,7 @@ include this improvement.
 You can even start the `FuncApplication` in 12m heap without degrading
 it. It runs in 8m but a bit slower, much slower in 6m, and fails to
 start in 4m. GC is down to 3% of startup time in the "func" sample,
-and 8% in "isolated" (the fully-leaded `DemoApplication`).
+and 8% in "demo" (the fully-leaded `DemoApplication`).
 
 With the `LazyInitBeanFactoryPostProcessor`:
 
@@ -295,6 +300,59 @@ Some of those might be needed if a JSON request was ever processed (it
 won't be in this app). Some will never be needed
 (e.g. `RestTemplateBuilder`).
 
+== ConfigFileApplicationListener
+
+See
+https://github.com/spring-projects/spring-boot/issues/13436[Boot#13436].
+
+`ConfigFileApplicationListener` creates a "description" of each
+resource that it attempts to load. In a tight loop 40% of sampled time
+goes to just creating the description (and 12% even when there is a
+single config location). It turns out to be extremely inefficient
+because of the use of `String.format` and `ResourceUtils.toURI` (both
+are expensive). The description is only logged by default if the file
+is found, so it isn't even used most of the time. I would recommend
+just using the "location" instead which is always available and always
+fairly descriptive of the resource, and costs nothing to compute.
+
+The other main source of inefficiency is `ClassPathResource.exists()`
+(25% sampled time). To fix that would be more involved - we'd probably
+have to index the jars at build time or something. Might be worth
+it. There's a workaround for users, though - if you know the locations
+of the config files in the file system, you can skip searching the
+classpath by specifying `spring.config.location` explicitly.
+
+Result of optimizing `ConfigFileApplicationListener` description, and
+setting `spring.config.location` explicitly (N.B. "func" is not
+affected, which is expected):
+
+```
+Benchmark               Mode  Cnt  Score   Error  Units
+MainBenchmark.boot        ss   10  1.074 ± 0.200   s/op
+MainBenchmark.bunc        ss   10  0.631 ± 0.139   s/op
+MainBenchmark.func        ss   10  0.571 ± 0.147   s/op
+MainBenchmark.demo    ss   10  1.128 ± 0.209   s/op
+MainBenchmark.manual      ss   10  1.014 ± 0.141   s/op
+MainBenchmark.shared      ss   10  0.209 ± 0.067   s/op
+```
+
+Also, the `ApplicationConversionService` shows up in the flame graph
+of "bunc" via `ConfigFileApplicationListener`, which uses it
+indirectly through a `Binder`. The `Binder` in that listener in total
+accounts for 1.5% of the startup time in "bunc", which seems
+excessive. Adding the shared `ApplicationConversionService`
+initialization to the `BackgroundPreinitializer` didn't help.
+
+=== CloudFoundryVcapEnvironmentPostProcessor
+
+See https://github.com/spring-projects/spring-boot/issues/13437[Boot#13437].
+
+`CloudFoundryVcapEnvironmentPostProcessor` only needs to parse JSON if
+it finds that the app is running in Cloud Foundry. But it always
+instantiates a JSON parser in the class init, which is potentially
+wasteful (2% of startup time in a really basic webflux app using
+functional bean registration instead of autoconfig).
+
 == Serializable Class Metadata
 
 Using Kryo we were able to cache and re-load configuration class
@@ -304,7 +362,7 @@ of the ASM processing, so nothing is gained.
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
-MainBenchmark.isolated    ss   10  1.294 ± 0.095   s/op
+MainBenchmark.demo    ss   10  1.294 ± 0.095   s/op
 MainBenchmark.shared      ss   10  0.264 ± 0.075   s/op
 ```
 
