@@ -16,7 +16,8 @@
 package com.example.func;
 
 import java.lang.reflect.Constructor;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
@@ -31,17 +32,36 @@ import org.springframework.core.MethodParameter;
  */
 public class ObjectProviders {
 
-	public static <T> ObjectProvider<T> single(ApplicationContext context,
-			Class<?> target, int index, Class<?>... params) {
-		return new LazyObjectProvider<>(context, target, index, params);
+	/**
+	 * Create an {@link ObjectProvider} for the unique constructor argument in the target
+	 * class.
+	 */
+	public static <T> ObjectProvider<T> provider(ApplicationContext context,
+			Class<?> target) {
+		return new LazyObjectProvider<>(context, target, -1);
 	}
 
-	public static <T> ObjectProvider<List<T>> list(ApplicationContext context,
+	/**
+	 * Create an {@link ObjectProvider} for the constructor argument with the provided
+	 * index, in the target class with a single constructor.
+	 */
+	public static <T> ObjectProvider<T> provider(ApplicationContext context,
+			Class<?> target, int index) {
+		return new LazyObjectProvider<>(context, target, index);
+	}
+
+	/**
+	 * Create an {@link ObjectProvider} for the constructor argument with the provided
+	 * index, in the target class with a constructor having the parameter type provided.
+	 */
+	public static <T> ObjectProvider<T> provider(ApplicationContext context,
 			Class<?> target, int index, Class<?>... params) {
 		return new LazyObjectProvider<>(context, target, index, params);
 	}
 
 	static class LazyObjectProvider<T> implements ObjectProvider<T> {
+
+		private Map<Class<?>, Constructor<?>> constructors = new HashMap<>();
 
 		private ApplicationContext context;
 		private Class<?> target;
@@ -50,7 +70,7 @@ public class ObjectProviders {
 		private ObjectProvider<T> delegate;
 
 		public LazyObjectProvider(ApplicationContext context, Class<?> target, int index,
-				Class<?>[] params) {
+				Class<?>... params) {
 			this.context = context;
 			this.target = target;
 			this.index = index;
@@ -60,7 +80,7 @@ public class ObjectProviders {
 		@Override
 		public T getObject() throws BeansException {
 			if (delegate == null) {
-				delegate = provider(context, target, index, params);
+				delegate = provider(context, target, params);
 			}
 			return delegate.getObject();
 		}
@@ -68,7 +88,7 @@ public class ObjectProviders {
 		@Override
 		public T getObject(Object... args) throws BeansException {
 			if (delegate == null) {
-				delegate = provider(context, target, index, params);
+				delegate = provider(context, target, params);
 			}
 			return delegate.getObject(args);
 		}
@@ -76,7 +96,7 @@ public class ObjectProviders {
 		@Override
 		public T getIfAvailable() throws BeansException {
 			if (delegate == null) {
-				delegate = provider(context, target, index, params);
+				delegate = provider(context, target, params);
 			}
 			return delegate.getIfAvailable();
 		}
@@ -84,20 +104,16 @@ public class ObjectProviders {
 		@Override
 		public T getIfUnique() throws BeansException {
 			if (delegate == null) {
-				delegate = provider(context, target, index, params);
+				delegate = provider(context, target, params);
 			}
 			return delegate.getIfUnique();
 		}
 
 		private ObjectProvider<T> provider(ApplicationContext context, Class<?> target,
-				int index, Class<?>[] params) {
-			Constructor<?> constructor;
-			try {
-				constructor = target.getConstructor(params);
-			}
-			catch (Exception e) {
-				throw new IllegalStateException("Cannot resolve constructor", e);
-			}
+				Class<?>[] params) {
+			Constructor<?> constructor = constructors.computeIfAbsent(target,
+					this::constructor);
+			int index = index(constructor);
 			MethodParameter methodParameter = new MethodParameter(constructor, index);
 			@SuppressWarnings("unchecked")
 			ObjectProvider<T> provider = (ObjectProvider<T>) context
@@ -105,6 +121,35 @@ public class ObjectProviders {
 					.resolveDependency(new DependencyDescriptor(methodParameter, false),
 							ErrorWebExceptionHandler.class.getName());
 			return provider;
+		}
+
+		private int index(Constructor<?> constructor) {
+			if (this.index >= 0) {
+				return this.index;
+			}
+			Class<?>[] types = constructor.getParameterTypes();
+			for (int i = 0; i < types.length; i++) {
+				Class<?> type = types[i];
+				if (ObjectProvider.class.isAssignableFrom(type)) {
+					return i;
+				}
+			}
+			return 0;
+		}
+
+		private Constructor<?> constructor(Class<?> target) {
+			Constructor<?> constructor;
+			try {
+				Constructor<?>[] constructors = target.getConstructors();
+				if (constructors.length == 1) {
+					return constructors[0];
+				}
+				constructor = target.getConstructor(params);
+			}
+			catch (Exception e) {
+				throw new IllegalStateException("Cannot resolve constructor", e);
+			}
+			return constructor;
 		}
 
 	}

@@ -7,8 +7,6 @@ import java.util.ArrayList;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import org.springframework.beans.factory.ListableBeanFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
@@ -38,7 +36,6 @@ import org.springframework.boot.web.reactive.error.DefaultErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.boot.web.server.WebServerFactoryCustomizerBeanPostProcessor;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.GenericApplicationContext;
@@ -212,10 +209,7 @@ public class FuncApplication implements Runnable, Closeable,
 		ResourceProperties resourceProperties = context.getBean(ResourceProperties.class);
 		ServerCodecConfigurer serverCodecs = context.getBean(ServerCodecConfigurer.class);
 		return new ErrorWebFluxAutoConfiguration(serverProperties, resourceProperties,
-				ObjectProviders.list(context, ErrorWebFluxAutoConfiguration.class, 2,
-						ServerProperties.class, ResourceProperties.class,
-						ObjectProvider.class, ServerCodecConfigurer.class,
-						ApplicationContext.class),
+				ObjectProviders.provider(context, ErrorWebFluxAutoConfiguration.class),
 				serverCodecs, context);
 	}
 
@@ -278,26 +272,13 @@ public class FuncApplication implements Runnable, Closeable,
 		context.registerBean(WebHttpHandlerBuilder.WEB_HANDLER_BEAN_NAME,
 				DispatcherHandler.class, () -> context
 						.getBean(EnableWebFluxConfigurationWrapper.class).webHandler());
-		context.registerBean(WebFluxConfigurer.class, () -> new WebFluxConfig(
-				context.getBean(ResourceProperties.class),
-				context.getBean(WebFluxProperties.class), context,
-				ObjectProviders.list(context, WebFluxConfig.class, 3,
-						ResourceProperties.class, WebFluxProperties.class,
-						ListableBeanFactory.class, ObjectProvider.class,
-						ObjectProvider.class, ObjectProvider.class, ObjectProvider.class),
-				ObjectProviders.list(context, WebFluxConfig.class, 4,
-						ResourceProperties.class, WebFluxProperties.class,
-						ListableBeanFactory.class, ObjectProvider.class,
-						ObjectProvider.class, ObjectProvider.class, ObjectProvider.class),
-				ObjectProviders.single(context, WebFluxConfig.class, 5,
-						ResourceProperties.class, WebFluxProperties.class,
-						ListableBeanFactory.class, ObjectProvider.class,
-						ObjectProvider.class, ObjectProvider.class, ObjectProvider.class),
-				ObjectProviders.list(context, WebFluxConfig.class, 6,
-						ResourceProperties.class, WebFluxProperties.class,
-						ListableBeanFactory.class, ObjectProvider.class,
-						ObjectProvider.class, ObjectProvider.class,
-						ObjectProvider.class)));
+		context.registerBean(WebFluxConfigurer.class,
+				() -> new WebFluxConfig(context.getBean(ResourceProperties.class),
+						context.getBean(WebFluxProperties.class), context,
+						ObjectProviders.provider(context, WebFluxConfig.class, 3),
+						ObjectProviders.provider(context, WebFluxConfig.class, 4),
+						ObjectProviders.provider(context, WebFluxConfig.class, 5),
+						ObjectProviders.provider(context, WebFluxConfig.class, 6)));
 	}
 
 	private void registerHttpHandlerAutoConfiguration() {
@@ -322,9 +303,8 @@ public class FuncApplication implements Runnable, Closeable,
 	private void registerHttpMessageConvertersAutoConfiguration() {
 		context.registerBean(HttpMessageConverters.class, () -> {
 			HttpMessageConvertersAutoConfiguration config = new HttpMessageConvertersAutoConfiguration(
-					ObjectProviders.list(context,
-							HttpMessageConvertersAutoConfiguration.class, 0,
-							ObjectProvider.class));
+					ObjectProviders.provider(context,
+							HttpMessageConvertersAutoConfiguration.class));
 			return config.messageConverters();
 		});
 		context.registerBean(StringHttpMessageConverter.class,
@@ -347,10 +327,9 @@ public class FuncApplication implements Runnable, Closeable,
 
 	private void registerRestTemplateAutoConfiguration() {
 		RestTemplateAutoConfiguration config = new RestTemplateAutoConfiguration(
-				ObjectProviders.single(context, RestTemplateAutoConfiguration.class, 0,
-						ObjectProvider.class, ObjectProvider.class),
-				ObjectProviders.list(context, RestTemplateAutoConfiguration.class, 1,
-						ObjectProvider.class, ObjectProvider.class));
+				ObjectProviders.provider(context, RestTemplateAutoConfiguration.class, 0),
+				ObjectProviders.provider(context, RestTemplateAutoConfiguration.class,
+						1));
 		context.registerBean(RestTemplateBuilder.class,
 				() -> config.restTemplateBuilder());
 	}
@@ -358,8 +337,7 @@ public class FuncApplication implements Runnable, Closeable,
 	private void registerWebClientAutoConfiguration() {
 		context.registerBean(WebClient.Builder.class, () -> {
 			WebClientAutoConfiguration config = new WebClientAutoConfiguration(
-					ObjectProviders.list(context, WebClientAutoConfiguration.class, 0,
-							ObjectProvider.class));
+					ObjectProviders.provider(context, WebClientAutoConfiguration.class));
 			return config.webClientBuilder();
 		});
 	}
