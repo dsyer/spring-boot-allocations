@@ -303,6 +303,30 @@ Some of those might be needed if a JSON request was ever processed (it
 won't be in this app). Some will never be needed
 (e.g. `RestTemplateBuilder`).
 
+== ConfigurationClassPostProcessor
+
+We created a custom `ConfigurationClassPostProcessor` that only
+processes classes that are present in spring.components. It doesn't
+make much difference in a vanilla Spring Boot app. But if you use it
+in an app that doesn't have any `@Configuration` it doesn't cost
+anything (unlike the vanilla CCPP).  Spring Boot jars have
+`spring.components` so this optimization doesn't affect the
+functionality. Details:
+
+```java
+
+	public void enhanceConfigurationClasses(ConfigurableListableBeanFactory beanFactory) {
+		...
+		CandidateComponentsIndex index = CandidateComponentsIndexLoader.loadIndex(null);
+		Set<String> components = index.getCandidateTypes("", Component.class.getName());
+		for (String beanName : beanFactory.getBeanDefinitionNames()) {
+			BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
+			if (!components.contains(beanDef.getBeanClassName())) {
+				continue;
+			}
+            ...
+```
+
 == ConfigFileApplicationListener
 
 See
@@ -449,3 +473,37 @@ A factor of 2 is almost not worth chasing at this level. A factor of
 20 probably is. Ditto 300. So we should try to avoid proxies as much
 as possible, and reflection. These results are probably independent of
 the GC issues experienced by the full Spring Boot application startup.
+
+== Java 10 Features
+
+Java 10 is slower than Java 8 in general (so far at least), but it has
+some features that might be useful to improve startup time.
+
+One is Class Data Sharing:
+
+```
+$ CP=target/benchmarks.jar
+$ java -Xshare:off -XX:+UseAppCDS -XX:DumpLoadedClassList=target/hello.lst -Ddemo.close=true -cp $CP com.example.func.FuncApplication
+$ java -Xshare:dump -XX:+UseAppCDS -XX:SharedClassListFile=target/hello.lst -XX:SharedArchiveFile=target/hello.jsa -cp $CP com.example.func.FuncApplication
+$ java -noverify -XX:TieredStopAtLevel=1 -Xshare:on -XX:+UseAppCDS -XX:SharedArchiveFile=target/hello.jsa -cp $CP com.example.func.FuncApplication
+...
+INFO: Netty started on port(s): 8080
+Benchmark app started
+Started HttpServer: 396ms
+```
+
+Compared with about 600ms without the CDS (with Java 8 and no CDS it is 500ms).
+
+The other is Ahead of Time Compilation:
+
+```
+$ java -XX:DumpLoadedClassList=target/app.classlist -cp $CP com.example.func.FuncApplication
+$ jaotc --output target/libDemo.so -J-cp -J$CP `cat target/app.classlist | sed -e 's,/,.,g'`
+$ java -noverify -XX:TieredStopAtLevel=1 -XX:AOTLibrary=target/libDemo.so -cp $CP com.example.func.FuncApplication
+Benchmark app started
+Started HttpServer: 476ms
+```
+
+So better than 600ms, but not much faster than Java 8. One reason it
+isn't a huge effect is that only the JDK classes are compiled (you
+still need commercial features to compile application classes).
