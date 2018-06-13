@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import org.springframework.beans.factory.ListableBeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
@@ -20,7 +22,6 @@ import org.springframework.boot.autoconfigure.reactor.core.ReactorCoreProperties
 import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.autoconfigure.web.client.RestTemplateAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.reactive.HackingObjectProvider;
 import org.springframework.boot.autoconfigure.web.reactive.ReactiveWebServerFactoryAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.reactive.ReactiveWebServerFactoryCustomizer;
 import org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration.EnableWebFluxConfiguration;
@@ -31,25 +32,21 @@ import org.springframework.boot.autoconfigure.web.reactive.function.client.WebCl
 import org.springframework.boot.context.properties.ConfigurationBeanFactoryMetadata;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.boot.web.client.RestTemplateCustomizer;
-import org.springframework.boot.web.codec.CodecCustomizer;
 import org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory;
 import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
 import org.springframework.boot.web.reactive.error.DefaultErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
-import org.springframework.boot.web.reactive.function.client.WebClientCustomizer;
 import org.springframework.boot.web.server.WebServerFactoryCustomizerBeanPostProcessor;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.format.support.FormattingConversionService;
 import org.springframework.http.codec.ServerCodecConfigurer;
-import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.http.server.reactive.HttpHandler;
@@ -64,13 +61,11 @@ import org.springframework.web.reactive.function.server.support.HandlerFunctionA
 import org.springframework.web.reactive.function.server.support.RouterFunctionMapping;
 import org.springframework.web.reactive.function.server.support.ServerResponseResultHandler;
 import org.springframework.web.reactive.result.SimpleHandlerAdapter;
-import org.springframework.web.reactive.result.method.HandlerMethodArgumentResolver;
 import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping;
 import org.springframework.web.reactive.result.method.annotation.ResponseBodyResultHandler;
 import org.springframework.web.reactive.result.method.annotation.ResponseEntityResultHandler;
 import org.springframework.web.reactive.result.view.ViewResolutionResultHandler;
-import org.springframework.web.reactive.result.view.ViewResolver;
 import org.springframework.web.server.WebExceptionHandler;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 import org.springframework.web.server.i18n.LocaleContextResolver;
@@ -217,8 +212,11 @@ public class FuncApplication implements Runnable, Closeable,
 		ResourceProperties resourceProperties = context.getBean(ResourceProperties.class);
 		ServerCodecConfigurer serverCodecs = context.getBean(ServerCodecConfigurer.class);
 		return new ErrorWebFluxAutoConfiguration(serverProperties, resourceProperties,
-				new BeanFactoryListProvider<>(context, ViewResolver.class), serverCodecs,
-				context);
+				ObjectProviders.list(context, ErrorWebFluxAutoConfiguration.class, 2,
+						ServerProperties.class, ResourceProperties.class,
+						ObjectProvider.class, ServerCodecConfigurer.class,
+						ApplicationContext.class),
+				serverCodecs, context);
 	}
 
 	private void registerWebFluxAutoConfiguration() {
@@ -280,14 +278,26 @@ public class FuncApplication implements Runnable, Closeable,
 		context.registerBean(WebHttpHandlerBuilder.WEB_HANDLER_BEAN_NAME,
 				DispatcherHandler.class, () -> context
 						.getBean(EnableWebFluxConfigurationWrapper.class).webHandler());
-		context.registerBean(WebFluxConfigurer.class,
-				() -> new WebFluxConfig(context.getBean(ResourceProperties.class),
-						context.getBean(WebFluxProperties.class), context,
-						new BeanFactoryListProvider<>(context,
-								HandlerMethodArgumentResolver.class),
-						new BeanFactoryListProvider<>(context, CodecCustomizer.class),
-						new HackingObjectProvider(),
-						new BeanFactoryListProvider<>(context, ViewResolver.class)));
+		context.registerBean(WebFluxConfigurer.class, () -> new WebFluxConfig(
+				context.getBean(ResourceProperties.class),
+				context.getBean(WebFluxProperties.class), context,
+				ObjectProviders.list(context, WebFluxConfig.class, 3,
+						ResourceProperties.class, WebFluxProperties.class,
+						ListableBeanFactory.class, ObjectProvider.class,
+						ObjectProvider.class, ObjectProvider.class, ObjectProvider.class),
+				ObjectProviders.list(context, WebFluxConfig.class, 4,
+						ResourceProperties.class, WebFluxProperties.class,
+						ListableBeanFactory.class, ObjectProvider.class,
+						ObjectProvider.class, ObjectProvider.class, ObjectProvider.class),
+				ObjectProviders.single(context, WebFluxConfig.class, 5,
+						ResourceProperties.class, WebFluxProperties.class,
+						ListableBeanFactory.class, ObjectProvider.class,
+						ObjectProvider.class, ObjectProvider.class, ObjectProvider.class),
+				ObjectProviders.list(context, WebFluxConfig.class, 6,
+						ResourceProperties.class, WebFluxProperties.class,
+						ListableBeanFactory.class, ObjectProvider.class,
+						ObjectProvider.class, ObjectProvider.class,
+						ObjectProvider.class)));
 	}
 
 	private void registerHttpHandlerAutoConfiguration() {
@@ -312,9 +322,9 @@ public class FuncApplication implements Runnable, Closeable,
 	private void registerHttpMessageConvertersAutoConfiguration() {
 		context.registerBean(HttpMessageConverters.class, () -> {
 			HttpMessageConvertersAutoConfiguration config = new HttpMessageConvertersAutoConfiguration(
-					new BeanFactoryListProvider<>(context,
-							new ParameterizedTypeReference<HttpMessageConverter<?>>() {
-							}));
+					ObjectProviders.list(context,
+							HttpMessageConvertersAutoConfiguration.class, 0,
+							ObjectProvider.class));
 			return config.messageConverters();
 		});
 		context.registerBean(StringHttpMessageConverter.class,
@@ -337,8 +347,10 @@ public class FuncApplication implements Runnable, Closeable,
 
 	private void registerRestTemplateAutoConfiguration() {
 		RestTemplateAutoConfiguration config = new RestTemplateAutoConfiguration(
-				new BeanFactoryObjectProvider<>(context, HttpMessageConverters.class),
-				new BeanFactoryListProvider<>(context, RestTemplateCustomizer.class));
+				ObjectProviders.single(context, RestTemplateAutoConfiguration.class, 0,
+						ObjectProvider.class, ObjectProvider.class),
+				ObjectProviders.list(context, RestTemplateAutoConfiguration.class, 1,
+						ObjectProvider.class, ObjectProvider.class));
 		context.registerBean(RestTemplateBuilder.class,
 				() -> config.restTemplateBuilder());
 	}
@@ -346,7 +358,8 @@ public class FuncApplication implements Runnable, Closeable,
 	private void registerWebClientAutoConfiguration() {
 		context.registerBean(WebClient.Builder.class, () -> {
 			WebClientAutoConfiguration config = new WebClientAutoConfiguration(
-					new BeanFactoryListProvider<>(context, WebClientCustomizer.class));
+					ObjectProviders.list(context, WebClientAutoConfiguration.class, 0,
+							ObjectProvider.class));
 			return config.webClientBuilder();
 		});
 	}
