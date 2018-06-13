@@ -19,6 +19,7 @@ import com.example.boot.BootApplication;
 import com.example.func.BuncApplication;
 import com.example.func.FuncApplication;
 import com.example.manual.ManualApplication;
+import com.example.slim.SlimApplication;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -39,6 +40,12 @@ public class MainBenchmark {
 	}
 
 	@Benchmark
+	public void slim(LauncherState state) throws Exception {
+		state.setMainClass(SlimApplication.class);
+		state.isolated();
+	}
+
+	@Benchmark
 	public void boot(LauncherState state) throws Exception {
 		state.setMainClass(BootApplication.class);
 		state.isolated();
@@ -55,13 +62,13 @@ public class MainBenchmark {
 		state.setMainClass(BuncApplication.class);
 		state.isolated();
 	}
-	
+
 	@Benchmark
 	public void func(LauncherState state) throws Exception {
 		state.setMainClass(FuncApplication.class);
 		state.isolated();
 	}
-	
+
 	@Benchmark
 	public void shared(LauncherState state) throws Exception {
 		state.shared();
