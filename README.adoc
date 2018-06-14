@@ -190,7 +190,16 @@ isn't much slower.
 
 Getting rid of as much `@Configuration` as possible would give us a
 way to measure the effect of any inefficiencies in that area more
-precisely. Here are some results:
+precisely. There is a Spring Boot issue that talks about supporting
+functional bean registration for user beans
+(https://github.com/spring-projects/spring-boot/issues/8115[Boot#8115]),
+but that doesn't cover the autoconfigs. There are some benchmarks
+https://github.com/dsyer/spring-boot-startup-bench/blob/master/static/README.adoc[here]
+that show how fast an app with functional bean registration can be,
+but the conclusion there was that the improvement was more to do with
+fewer features. Time to do some more tests.
+
+Here are some results:
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
@@ -213,7 +222,8 @@ flame graph for this one has much less GC activity.
 
 * "bunc" registers all beans in the application directly, by class or
 using the functional bean registration API. It uses
-`SpringApplication` (so all of Boot except autoconfig, basically).
+`SpringApplication` (so all of Boot except autoconfig, basically), but
+it switches off the `ConfigurationClassPostProcessor`.
 
 * "func" creates the application context by hand, forgoing the
 benefits of Spring Boot. Results are pretty good (first sample under
@@ -229,7 +239,14 @@ have side effects, so probably not a good idea in general).
 
 Here's a flame graph from the "func" sample:
 
-image::images/flame_func.svg[func,width=50%]
+[cols="50a,50a"]
+|===
+|image::images/flame_func.svg[func]
+|image::images/flame_bunc.svg[bunc]
+
+| "func"
+| "bunc"
+|===
 
 Note that `ConfigurationClassPostProcessor` is not used at all. If it
 was it would still account for 6% of the startup time because it
@@ -263,7 +280,7 @@ https://github.com/spring-projects/spring-boot/issues/13423[spring-boot#1423]. I
 makes quite a big difference (about 60ms). The data above already
 include this improvement.
 
-You can even start the `FuncApplication` in 12m heap without degrading
+You can start the `FuncApplication` in 12m heap without degrading
 it. It runs in 8m but a bit slower, much slower in 6m, and fails to
 start in 4m. GC is down to 3% of startup time in the "func" sample,
 and 8% in "demo" (the fully-leaded `DemoApplication`).
