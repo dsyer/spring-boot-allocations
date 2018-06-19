@@ -415,13 +415,7 @@ Flame graphs with `alloc=cpu`, with the cache:
 image::images/flame_cached.svg[cpu_cached,width=50%]
 
 Notice the large fraction of the samples in `GCTaskThread::run`
-(19.47% of the total startup time). These graphs were generated using
-the agent, so it captures the startup and only one application context
-lifecycle, and with a higher sampling rate:
-
-```
-java 
-```
+(19.47% of the total startup time).
 
 The cached flamegraph doesn't look very different from the vanilla
 one. The metadata in the cache probably contains all the warts of the

@@ -216,8 +216,7 @@ public class FuncApplication implements Runnable, Closeable,
 	private void registerWebFluxAutoConfiguration() {
 		context.registerBean(EnableWebFluxConfigurationWrapper.class,
 				() -> new EnableWebFluxConfigurationWrapper(
-						new EnableWebFluxConfiguration(
-								context.getBean(WebFluxProperties.class))));
+						context.getBean(WebFluxProperties.class)));
 		context.registerBean(HandlerFunctionAdapter.class,
 				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
 						.handlerFunctionAdapter());
@@ -355,87 +354,10 @@ class ReactorConfiguration {
 
 }
 
-class EnableWebFluxConfigurationWrapper {
-	private final EnableWebFluxConfiguration config;
+class EnableWebFluxConfigurationWrapper extends EnableWebFluxConfiguration {
 
-	public EnableWebFluxConfigurationWrapper(EnableWebFluxConfiguration config) {
-		this.config = config;
-	}
-
-	public EnableWebFluxConfiguration getConfig() {
-		return this.config;
-	}
-
-	public DispatcherHandler webHandler() {
-		return this.config.webHandler();
-	}
-
-	public WebExceptionHandler responseStatusExceptionHandler() {
-		return this.config.responseStatusExceptionHandler();
-	}
-
-	public RequestMappingHandlerMapping requestMappingHandlerMapping() {
-		return this.config.requestMappingHandlerMapping();
-	}
-
-	public RequestedContentTypeResolver webFluxContentTypeResolver() {
-		return this.config.webFluxContentTypeResolver();
-	}
-
-	public RouterFunctionMapping routerFunctionMapping() {
-		return this.config.routerFunctionMapping();
-	}
-
-	public HandlerMapping resourceHandlerMapping() {
-		return this.config.resourceHandlerMapping();
-	}
-
-	public RequestMappingHandlerAdapter requestMappingHandlerAdapter() {
-		return this.config.requestMappingHandlerAdapter();
-	}
-
-	public FormattingConversionService webFluxConversionService() {
-		return this.config.webFluxConversionService();
-	}
-
-	public Validator webFluxValidator() {
-		return this.config.webFluxValidator();
-	}
-
-	public ServerCodecConfigurer serverCodecConfigurer() {
-		return this.config.serverCodecConfigurer();
-	}
-
-	public LocaleContextResolver localeContextResolver() {
-		return this.config.localeContextResolver();
-	}
-
-	public ReactiveAdapterRegistry webFluxAdapterRegistry() {
-		return this.config.webFluxAdapterRegistry();
-	}
-
-	public HandlerFunctionAdapter handlerFunctionAdapter() {
-		return this.config.handlerFunctionAdapter();
-	}
-
-	public SimpleHandlerAdapter simpleHandlerAdapter() {
-		return this.config.simpleHandlerAdapter();
-	}
-
-	public ResponseEntityResultHandler responseEntityResultHandler() {
-		return this.config.responseEntityResultHandler();
-	}
-
-	public ResponseBodyResultHandler responseBodyResultHandler() {
-		return this.config.responseBodyResultHandler();
-	}
-
-	public ViewResolutionResultHandler viewResolutionResultHandler() {
-		return this.config.viewResolutionResultHandler();
-	}
-
-	public ServerResponseResultHandler serverResponseResultHandler() {
-		return this.config.serverResponseResultHandler();
+	public EnableWebFluxConfigurationWrapper(WebFluxProperties properties) {
+		super(properties);
 	}
 
 }
