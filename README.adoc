@@ -344,6 +344,10 @@ functionality. Details:
             ...
 ```
 
+The small apps in this benchmark do not benefit from this
+customization, and might even be slightly slower because they need to
+read the index.
+
 == ConfigFileApplicationListener
 
 See
