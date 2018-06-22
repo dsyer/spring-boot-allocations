@@ -43,6 +43,7 @@ public class BuncApplication extends FuncApplication {
 			@Override
 			protected void load(ApplicationContext context, Object[] sources) {
 				// We don't want the annotation bean definition reader
+				// super.load(context, sources);
 			}
 		};
 		application.addInitializers(this);
