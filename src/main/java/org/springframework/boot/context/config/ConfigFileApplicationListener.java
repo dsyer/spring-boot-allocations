@@ -38,10 +38,6 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.boot.context.event.ApplicationPreparedEvent;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.bind.PropertySourcesPlaceholdersResolver;
-import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.boot.env.PropertySourceLoader;
 import org.springframework.boot.env.RandomValuePropertySource;
@@ -365,10 +361,9 @@ public class ConfigFileApplicationListener
 					&& !this.environment.containsProperty(INCLUDE_PROFILES_PROPERTY)) {
 				return Collections.emptySet();
 			}
-			Binder binder = Binder.get(this.environment);
 			Set<Profile> activeProfiles = new LinkedHashSet<>();
-			activeProfiles.addAll(getProfiles(binder, ACTIVE_PROFILES_PROPERTY));
-			activeProfiles.addAll(getProfiles(binder, INCLUDE_PROFILES_PROPERTY));
+			activeProfiles.addAll(getProfiles(ACTIVE_PROFILES_PROPERTY));
+			activeProfiles.addAll(getProfiles(INCLUDE_PROFILES_PROPERTY));
 			return activeProfiles;
 		}
 
@@ -457,12 +452,14 @@ public class ConfigFileApplicationListener
 					}
 				}
 			}
-			for (PropertySourceLoader loader : this.propertySourceLoaders) {
-				for (String fileExtension : loader.getFileExtensions()) {
-					String prefix = location + name;
-					fileExtension = "." + fileExtension;
-					loadForFileExtension(loader, prefix, fileExtension, profile,
-							filterFactory, consumer);
+			if (name != null) {
+				for (PropertySourceLoader loader : this.propertySourceLoaders) {
+					for (String fileExtension : loader.getFileExtensions()) {
+						String prefix = location + name;
+						fileExtension = "." + fileExtension;
+						loadForFileExtension(loader, prefix, fileExtension, profile,
+								filterFactory, consumer);
+					}
 				}
 			}
 		}
@@ -556,14 +553,11 @@ public class ConfigFileApplicationListener
 				return Collections.emptyList();
 			}
 			return loaded.stream().map((propertySource) -> {
-				Binder binder = new Binder(
-						ConfigurationPropertySources.from(propertySource),
-						new PropertySourcesPlaceholdersResolver(this.environment));
 				return new Document(propertySource,
-						binder.bind("spring.profiles", Bindable.of(String[].class))
-								.orElse(null),
-						getProfiles(binder, ACTIVE_PROFILES_PROPERTY),
-						getProfiles(binder, INCLUDE_PROFILES_PROPERTY));
+						StringUtils.commaDelimitedListToStringArray(
+								environment.getProperty("spring.profiles", "")),
+						getProfiles(ACTIVE_PROFILES_PROPERTY),
+						getProfiles(INCLUDE_PROFILES_PROPERTY));
 			}).collect(Collectors.toList());
 		}
 
@@ -571,12 +565,11 @@ public class ConfigFileApplicationListener
 			return location;
 		}
 
-		private Set<Profile> getProfiles(Binder binder, String name) {
-			return binder.bind(name, String[].class).map(this::asProfileSet)
-					.orElse(Collections.emptySet());
+		private Set<Profile> getProfiles(String name) {
+			return asProfileSet(asResolvedSet(this.environment.getProperty(name), ""));
 		}
 
-		private Set<Profile> asProfileSet(String[] profileNames) {
+		private Set<Profile> asProfileSet(Iterable<String> profileNames) {
 			List<Profile> profiles = new ArrayList<>();
 			for (String profileName : profileNames) {
 				profiles.add(new Profile(profileName));
@@ -631,9 +624,10 @@ public class ConfigFileApplicationListener
 		}
 
 		private Set<String> asResolvedSet(String value, String fallback) {
-			List<String> list = Arrays.asList(StringUtils.trimArrayElements(
-					StringUtils.commaDelimitedListToStringArray(value != null
-							? this.environment.resolvePlaceholders(value) : fallback)));
+			List<String> list = Arrays.asList(StringUtils
+					.trimArrayElements(StringUtils.commaDelimitedListToStringArray(
+							value != null ? this.environment.resolvePlaceholders(value)
+									: fallback)));
 			Collections.reverse(list);
 			return new LinkedHashSet<>(list);
 		}
