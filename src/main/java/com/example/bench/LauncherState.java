@@ -60,6 +60,7 @@ public class LauncherState implements Runnable, Closeable {
 		System.setProperty("server.port", "0");
 		System.setProperty("spring.config.location",
 				"file:./src/main/resources/application.properties");
+		System.setProperty("spring.main.logStartupInfo", "false");
 	}
 
 	public void shared() throws Exception {

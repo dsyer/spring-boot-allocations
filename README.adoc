@@ -326,7 +326,7 @@ We created a custom `ConfigurationClassPostProcessor` that only
 processes classes that are present in spring.components. It doesn't
 make much difference in a vanilla Spring Boot app. But if you use it
 in an app that doesn't have any `@Configuration` it doesn't cost
-anything (unlike the vanilla CCPP).  Spring Boot jars have
+anything (unlike the vanilla CCPP). Spring Boot jars have
 `spring.components` so this optimization doesn't affect the
 functionality. Details:
 
@@ -400,6 +400,62 @@ it finds that the app is running in Cloud Foundry. But it always
 instantiates a JSON parser in the class init, which is potentially
 wasteful (2% of startup time in a really basic webflux app using
 functional bean registration instead of autoconfig).
+
+== GenericApplicationListenerAdapter
+
+See https://jira.spring.io/browse/SPR-16970[SPR-16970] and https://github.com/spring-projects/spring-boot/issues/13566[Boot#13566].
+
+There's a lot of cacheing already in
+`AbstractApplicationEventMulticaster`, but it still shows up as a blip
+on the flame graphs (roughly 3% of `BuncApplication`). Every
+`ApplicationListener` is queried to compute its event type for every
+event that is processed (if it is not already a
+`GenericApplicationListener`, which most are not). The computation of
+the generic type is what fills the flame
+graph. `GenericApplicationListenerAdapter` and/or
+`AbstractApplicationEventMulticaster` could probably be optimized to
+improve this.
+
+Spring Boot exacerbates this by having 2
+`ApplicationEventMulticasters` (one in `EventPublishingRunListener`
+and one in the actual `ApplicationContext`).
+
+Some of the Boot listeners could be implemented as
+`SmartApplicationListener` to avoid the cost of looking up the generic
+type information.
+
+It might also help to use a different callback
+(e.g. `SpringApplicationRunListener` or
+`ApplicationContextInitializer`) instead of
+`ApplicationListener`. E.g. `LiquibaseServiceLocatorApplicationListener`
+is queried multiple times in a vanilla Boot app, only to do nothing
+because Liquibase is not present.
+
+== Binder
+
+See https://github.com/spring-projects/spring-boot/issues/13565[Boot#13565].
+
+Spring Boot uses `Binder.bind()` at a very early stage in quite a lot
+of places. `SpringApplication` itself, `LoggingApplicationListener`,
+`ConfigFileApplicationListener` and `AnsiOutputApplicationListener`
+all get used early and their combined use of `Binder` adds up to more
+than 5% of the startup time in `BuncApplication`. If `Binder` could be
+replaced with a simple call to `Environment.getProperty()` it would be
+much faster - we tried this with `ConfigFileApplicationListener` with
+positive results, but that caused test failures in Spring Boot, so the
+binder is doing something clever that is necessary in at least some
+corner cases.
+
+Benchmark for extracting a `String[]` from an `Environment` property:
+
+```
+Benchmark                Mode  Cnt       Score       Error  Units
+BinderBenchmark.binder  thrpt    5    5384.461 ±   359.367  ops/s
+BinderBenchmark.direct  thrpt    5  791322.965 ± 22667.655  ops/s
+```
+
+The "direct" sample uses `Environment.getProperty()`, and the "binder
+sample uses `Binder.bind()`.
 
 == Serializable Class Metadata
 
