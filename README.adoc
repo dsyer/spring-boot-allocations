@@ -294,6 +294,7 @@ MainBenchmark.func        ss   10  0.523 ± 0.132   s/op
 ```
 
 In all 17 beans are not created in "bunc" on startup, compared to when
+
 the lazy processor is not registered:
 
 ```
@@ -456,6 +457,27 @@ BinderBenchmark.direct  thrpt    5  791322.965 ± 22667.655  ops/s
 
 The "direct" sample uses `Environment.getProperty()`, and the "binder
 sample uses `Binder.bind()`.
+
+== JVM Command Line
+
+The benchmarks so far do not tweak the JVM command line, and we know
+from other benchmarks that you can spped things up on startup quite a
+lot doing that.
+
+With all the problems above worked around in some way (e.g. replacing
+Spring Boot listeners and Spring Framework bean factory), here's the
+result with
+
+```
+$ java -noverify -XX:TieredStopAtLevel=1 -Djava.security.egd=file:/dev/./urandom -jar target/benchmarks.jar MainBenchmark
+```
+
+```
+Benchmark           Mode  Cnt  Score   Error  Units
+MainBenchmark.demo    ss   10  0.661 ± 0.056   s/op
+MainBenchmark.bunc    ss   10  0.369 ± 0.054   s/op
+MainBenchmark.func    ss   10  0.304 ± 0.045   s/op
+```
 
 == Serializable Class Metadata
 
