@@ -553,9 +553,9 @@ public class ConfigFileApplicationListener
 				return Collections.emptyList();
 			}
 			return loaded.stream().map((propertySource) -> {
+				String profiles = (String) propertySource.getProperty("spring.profiles");
 				return new Document(propertySource,
-						StringUtils.commaDelimitedListToStringArray(
-								environment.getProperty("spring.profiles", "")),
+						profiles != null ? StringUtils.commaDelimitedListToStringArray(profiles) : null,
 						getProfiles(ACTIVE_PROFILES_PROPERTY),
 						getProfiles(INCLUDE_PROFILES_PROPERTY));
 			}).collect(Collectors.toList());
