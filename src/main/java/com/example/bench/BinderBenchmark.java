@@ -16,6 +16,8 @@
 package com.example.bench;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -25,6 +27,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
 import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.ConfigurationPropertySource;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
@@ -37,6 +41,16 @@ public class BinderBenchmark {
 
 	@Benchmark
 	public void direct(DirectState state) throws Exception {
+		state.run();
+	}
+
+	@Benchmark
+	public void map(MapState state) throws Exception {
+		state.run();
+	}
+
+	@Benchmark
+	public void wrapped(WrappedState state) throws Exception {
 		state.run();
 	}
 
@@ -56,6 +70,40 @@ public class BinderBenchmark {
 	}
 
 	@State(Scope.Thread)
+	public static class MapState extends EnvironmentState {
+		private String[] value;
+		private MapConfigurationPropertySource source;
+
+		protected void init() {
+			Map<String, String> map = new HashMap<>();
+			map.put("spring.profiles.active", "one,two");
+			source = new MapConfigurationPropertySource(map);
+		}
+
+		public void run() {
+			Binder binder = new Binder(source);
+			value = binder.bind("spring.profiles.active", String[].class).get();
+			assert value.length == 2;
+		}
+	}
+
+	@State(Scope.Thread)
+	public static class WrappedState extends EnvironmentState {
+		private String[] value;
+		private ConfigurationPropertySource source;
+
+		protected void init() {
+			source = new WrappedConfigurationPropertySource(environment);
+		}
+
+		public void run() {
+			Binder binder = new Binder(source);
+			value = binder.bind("spring.profiles.active", String[].class).get();
+			assert value.length == 2;
+		}
+	}
+
+	@State(Scope.Thread)
 	public static class BinderState extends EnvironmentState {
 		private String[] value;
 
@@ -67,7 +115,7 @@ public class BinderBenchmark {
 	}
 
 	public static void main(String[] args) {
-		new DirectState().run();
+		new WrappedState().run();
 	}
 
 	public static abstract class EnvironmentState {
@@ -78,7 +126,11 @@ public class BinderBenchmark {
 			MutablePropertySources propertySources = environment.getPropertySources();
 			propertySources.addLast(new MapPropertySource("profiles",
 					Collections.singletonMap("spring.profiles.active", "one,two")));
+			init();
 		}
+
+		protected void init() {
+		};
 
 	}
 

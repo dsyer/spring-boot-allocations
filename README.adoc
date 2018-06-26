@@ -451,12 +451,21 @@ Benchmark for extracting a `String[]` from an `Environment` property:
 
 ```
 Benchmark                Mode  Cnt       Score       Error  Units
-BinderBenchmark.binder  thrpt    5    5384.461 ±   359.367  ops/s
-BinderBenchmark.direct  thrpt    5  791322.965 ± 22667.655  ops/s
+BinderBenchmark.binder  thrpt    5    1942.687 ±   333.568  ops/s
+BinderBenchmark.direct  thrpt    5  286815.982 ± 36887.052  ops/s
+BinderBenchmark.map     thrpt    5   16381.371 ±  3743.830  ops/s
+BinderBenchmark.wrapped thrpt    5   15568.784 ±   580.370  ops/s
 ```
 
 The "direct" sample uses `Environment.getProperty()`, and the "binder
-sample uses `Binder.bind()`.
+sample uses `Binder.bind()`. The "map" benchmark uses a
+MapConfigurationPropertySource instead of the full Environment (I
+noticed this pattern in XADataSourceAutoConfiguration). It's only 10x
+faster, but that's a step in the right direction. Maybe that's a hint
+about how to improve it, especially for the early bindings.  It's
+almost as fast if you just wrap the Environment in a
+ConfigurationPropertySource that simply mirrors
+Environment.getProperty() (the "wrapped" benchmark);
 
 == JVM Command Line
 
