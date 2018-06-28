@@ -21,7 +21,6 @@ import org.springframework.boot.autoconfigure.web.reactive.error.ErrorWebFluxAut
 import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
 import org.springframework.boot.web.reactive.context.AnnotationConfigReactiveWebServerApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.GenericApplicationContext;
@@ -45,7 +44,6 @@ public class ManualApplication implements Runnable, Closeable {
 
 	private ConfigurableApplicationContext context;
 
-	@Bean
 	public RouterFunction<?> userEndpoints() {
 		return route(GET("/"), request -> ok().body(Mono.just("Hello"), String.class));
 	}

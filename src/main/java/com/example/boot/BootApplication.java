@@ -22,7 +22,6 @@ import org.springframework.boot.autoconfigure.web.reactive.function.client.WebCl
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.web.reactive.function.server.RouterFunction;
@@ -38,7 +37,6 @@ public class BootApplication implements Runnable, Closeable,
 
 	private ConfigurableApplicationContext context;
 
-	@Bean
 	public RouterFunction<?> userEndpoints() {
 		return route(GET("/"), request -> ok().body(Mono.just("Hello"), String.class));
 	}
@@ -68,7 +66,7 @@ public class BootApplication implements Runnable, Closeable,
 
 	private ConfigurableApplicationContext create() {
 		ConfigurableApplicationContext context = new SpringApplicationBuilder(
-				AutoConfiguration.class).run();
+				AutoConfiguration.class).initializers(this).run();
 		return context;
 	}
 
