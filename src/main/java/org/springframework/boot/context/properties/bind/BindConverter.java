@@ -70,7 +70,9 @@ class BindConverter {
 			ConversionService conversionService,
 			Consumer<PropertyEditorRegistry> propertyEditorInitializer) {
 		List<ConversionService> services = new ArrayList<>();
-		services.add(new TypeConverterConversionService(propertyEditorInitializer));
+		if (propertyEditorInitializer != null) {
+			services.add(new TypeConverterConversionService(propertyEditorInitializer));
+		}
 		services.add(conversionService);
 		if (!(conversionService instanceof ApplicationConversionService)) {
 			services.add(ApplicationConversionService.getSharedInstance());
@@ -123,6 +125,9 @@ class BindConverter {
 		@Override
 		public boolean canConvert(Class<?> sourceType, Class<?> targetType) {
 			Assert.notNull(targetType, "Target type to convert to cannot be null");
+			if (targetType.isAssignableFrom(sourceType)) {
+				return true;
+			}
 			return canConvert(
 					(sourceType != null ? TypeDescriptor.valueOf(sourceType) : null),
 					TypeDescriptor.valueOf(targetType));
@@ -130,6 +135,9 @@ class BindConverter {
 
 		@Override
 		public boolean canConvert(TypeDescriptor sourceType, TypeDescriptor targetType) {
+			if (sourceType.isAssignableTo(targetType)) {
+				return true;
+			}
 			for (ConversionService service : this.delegates) {
 				if (service.canConvert(sourceType, targetType)) {
 					return true;

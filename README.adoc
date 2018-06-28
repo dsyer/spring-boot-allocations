@@ -184,7 +184,9 @@ MainBenchmark.shared      ss   10  0.227 ± 0.070   s/op
 With that change and some other minor tweaks (see below), you can run
 the vanilla `DemoApplication` in 8m of heap (it starts a bit slowly
 but runs fine). With 12m heap you see a lot more GC logged, but it
-isn't much slower.
+isn't much slower. Flame graph:
+
+image::images/flame_demo.svg[cpu_cached,width=50%]
 
 == Functional Bean Registration
 
