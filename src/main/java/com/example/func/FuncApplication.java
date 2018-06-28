@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import com.example.config.BeanCountingApplicationListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -110,6 +111,7 @@ public class FuncApplication implements Runnable, Closeable,
 		initialize(context);
 		context.refresh();
 		System.err.println(MARKER);
+		new BeanCountingApplicationListener().log(context);
 	}
 
 	@Override
