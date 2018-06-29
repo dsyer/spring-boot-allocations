@@ -404,6 +404,11 @@ instantiates a JSON parser in the class init, which is potentially
 wasteful (2% of startup time in a really basic webflux app using
 functional bean registration instead of autoconfig).
 
+== LoggingApplicationListener
+
+Apparently an app starts up quicker (20ms or so) if there are no
+`logging.level` bindings.
+
 == GenericApplicationListenerAdapter
 
 See https://jira.spring.io/browse/SPR-16970[SPR-16970] and https://github.com/spring-projects/spring-boot/issues/13566[Boot#13566].
@@ -489,6 +494,55 @@ MainBenchmark.demo    ss   10  0.661 ± 0.056   s/op
 MainBenchmark.bunc    ss   10  0.369 ± 0.054   s/op
 MainBenchmark.func    ss   10  0.304 ± 0.045   s/op
 ```
+
+== Tomcat
+
+Using Tomcat instead of Netty is an interesting experiment. Here's the
+result (from the "tomcat" branch):
+
+```
+Benchmark             Mode  Cnt  Score   Error  Units
+MainBenchmark.boot      ss   10  0.698 ± 0.062   s/op
+MainBenchmark.bunc      ss   10  0.432 ± 0.037   s/op
+MainBenchmark.demo      ss   10  0.706 ± 0.049   s/op
+MainBenchmark.func      ss   10  0.389 ± 0.028   s/op
+MainBenchmark.manual    ss   10  0.641 ± 0.027   s/op
+MainBenchmark.shared    ss   10  0.130 ± 0.040   s/op
+```
+
+Compare the latest results from master (50ms faster):
+
+```
+Benchmark             Mode  Cnt  Score   Error  Units
+MainBenchmark.boot      ss   10  0.632 ± 0.052   s/op
+MainBenchmark.bunc      ss   10  0.380 ± 0.023   s/op
+MainBenchmark.demo      ss   10  0.663 ± 0.055   s/op
+MainBenchmark.func      ss   10  0.338 ± 0.032   s/op
+MainBenchmark.manual    ss   10  0.601 ± 0.044   s/op
+MainBenchmark.shared    ss   10  0.132 ± 0.035   s/op
+```
+
+From the flame graphs, it looks like lot of the difference comes from
+additional GC pressure.  We can also try with MVC (results from "mvc"
+branch):
+
+```
+Benchmark             Mode  Cnt  Score   Error  Units
+MainBenchmark.boot      ss   10  0.827 ± 0.075   s/op
+MainBenchmark.bunc      ss   10  0.465 ± 0.042   s/op
+MainBenchmark.demo      ss   10  0.874 ± 0.091   s/op
+MainBenchmark.func      ss   10  0.414 ± 0.038   s/op
+MainBenchmark.manual    ss   10  0.775 ± 0.058   s/op
+MainBenchmark.shared    ss   10  0.162 ± 0.042   s/op
+```
+
+N.B. this doesn't compile on the command line. You have to use the IDE
+to compile and then `mvn install` to build the jar.
+
+The MVC apps are slower than the reactive ones, by a quite a bit. They
+load more classes and have more beans. The GC pressure is also still a
+problem. Both Jetty and Undertow perform pretty much identically to
+Tomcat.
 
 == Serializable Class Metadata
 
