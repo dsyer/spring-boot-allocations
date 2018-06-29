@@ -15,6 +15,7 @@
  */
 package com.example.bench;
 
+import org.aspectj.lang.Aspects;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -25,8 +26,11 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 
 import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PublicConfigurationClassEnhancer;
 
 @Measurement(iterations = 5)
 @Warmup(iterations = 3)
@@ -54,12 +58,18 @@ public class BeanCreationBenchmark {
 	}
 
 	@Benchmark
+	public void enhnc(EnhancerState state) throws Exception {
+		state.run();
+	}
+
+	@Benchmark
 	public void bare(BareState state) throws Exception {
 		state.run();
 	}
 
 	public static void main(String[] args) {
-		new CglibState().run();
+		new EnhancerState().run();
+		Aspects.aspectOf(CallCounter.class).log();
 	}
 
 	@State(Scope.Thread)
@@ -124,6 +134,18 @@ public class BeanCreationBenchmark {
 	}
 
 	@State(Scope.Thread)
+	public static class EnhancerState {
+
+		public void run() {
+			Class<?> enhanced = new PublicConfigurationClassEnhancer().enhance(
+					MyConfiguration.class, MyConfiguration.class.getClassLoader());
+			MyConfiguration config = (MyConfiguration) BeanUtils.instantiateClass(enhanced);
+			assert config.foo() != null;
+			assert config.bean(config.foo()).getFoo() != null;
+		}
+	}
+
+	@State(Scope.Thread)
 	public static class SimpleState {
 
 		DefaultListableBeanFactory factory;
@@ -146,6 +168,7 @@ public class BeanCreationBenchmark {
 
 	interface Bean {
 		void setFoo(Foo foo);
+
 		Foo getFoo();
 	}
 
@@ -169,6 +192,23 @@ public class BeanCreationBenchmark {
 		}
 	}
 
+	@Configuration
+	static class MyConfiguration {
+		@org.springframework.context.annotation.Bean
+		public MyBean bean(Foo foo) {
+			return new MyBean(foo);
+		}
+
+		@org.springframework.context.annotation.Bean
+		public Foo foo() {
+			return new Foo("foo");
+		}
+
+		@org.springframework.context.annotation.Bean
+		public String value() {
+			return "bar";
+		}
+}
 }
 
 class Foo {

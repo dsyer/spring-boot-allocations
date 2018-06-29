@@ -1,0 +1,12 @@
+<!DOCTYPE aspectj PUBLIC "-//AspectJ//DTD//EN" "http://www.eclipse.org/aspectj/dtd/aspectj.dtd">
+<aspectj>
+	<weaver>
+		<include within="com.example.*" />
+		<include within="org.springframework..*" />
+	</weaver>
+
+	<aspects>
+		<aspect name="com.example.bench.CallCounter" />
+	</aspects>
+
+</aspectj>
