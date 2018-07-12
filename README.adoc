@@ -31,6 +31,12 @@ MainBenchmark.demo        ss   10  1.197 ± 0.188   s/op
 MainBenchmark.shared      ss   10  0.226 ± 0.067   s/op
 ```
 
+See also the https://github.com/dsyer/spring-boot-micro-apps[Micro
+Apps] repo, where you will find the same sample apps but not the
+benchmarks. This makes them easier to just run in an ad-hoc way, if
+you want to just mess around. It is also where we are teaching Spring
+to play with https://github.com/oracle/graal/[GraalVM].
+
 === Desktop Results
 
 Vanilla:
