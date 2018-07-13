@@ -1,3 +1,138 @@
+This project contains some benchmarks on Spring Boot startup time. The
+findings here have shown us how to make several optimizations in
+Spring Boot 2.1 and Spring 5.1, so those are highlighted. The
+optimizations and quite a few of the focused benchmarks concentrate on
+memory allocations and garbage collection pressure, which are hard to
+measure, but quite easy to run into problems with on startup.
+
+There is a more extensive but older set of benchmarks
+https://github.com/dsyer/spring-boot-startup-bench[elsewhere] that you
+also might find interesting.
+
+== TL;DR How do I make my app go faster?
+
+You are mostly going to have to drop features, so not all of these
+suggestions will be possible for all apps. Some are not so painful,
+and actually pretty natural in a container, e.g. if you are building a
+docker image it's better to unpack the jar and put application classes
+in a different filesystem layer anyway.
+
+* Classpath exclusions from Spring Boot web starters:
+  - Hibernate Validator
+  - Jackson (but Spring Boot actuators depend on it). Use
+    Gson if you need JSON rendering (only works with MVC out of the box).
+  - Logback: use `slf4j-jdk14` instead
+* Use the `spring-context-indexer`. It's not going to add much, but
+Spring Boot autoconfiguration is indexed, and every little helps.
+* Don't use actuators if you can afford not to.
+* Use Spring Boot 2.1 and Spring 5.1 when they are available.
+* Fix the location of the
+https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-application-property-files[Spring Boot config file(s)]
+with `spring.config.location` (command line argument or System property etc.).
+Example for testing in IDE:
+`spring.config.location=file://./src/main/resources/application.properties`.
+* Switch off JMX if you don't need it with `spring.jmx.enabled=false`
+* Make bean definitions lazy by default. There's nothing in Spring
+Boot that does this, but there's a `LazyInitBeanFactoryPostProcessor`
+in this project you can copy.
+* Unpack the fat jar and run with an explicit classpath.
+* Run the JVM with `-noverify`. Also consider `-XX:TieredStopAtLevel=1`
+(that will slow down the JIT later at the expense of the saved startup time).
+
+A more extreme choice is to re-write all your application
+configuration using functional bean definitions. This includes all the
+Spring Boot autoconfiguration you are using, most of which can be
+re-used, but it's stll manual work to identify which classes to use
+and register all the bean definitions. If you try this approach you
+might see a 2x improvement in startup time. Look at the
+`BuncApplication` to see how to start Spring Boot without the
+`@Configuration` class processor.
+
+== Summary of Results
+
+Here is a graph that summarizes the results, in terms of how the
+startup time of the sample app (a single HTTP endpoint using Netty)
+behaves when we apply various changes:
+
+image::images/startup-progress.png[startup-progress,width=75%]
+
+The blue bars show successive improvements in the vanilla "demo"
+sample (a fully-leaded Spring Boot application). Once all the tweaks
+are applied we can see approximately a 200ms improvement (>15%).
+
+* The "Demo (baseline)" bar is the first benchmark we measured. It
+measures the time to start the app in a fresh class loader, but in a
+warm JVM, so it's a little bit quicker in absolute terms than a cold
+start (by maybe 10%).
+
+* The "Components" bar is what happens if you use the
+`spring.components` index (just by adding `spring-context-indexer` to
+the classpath). It's a tiny app so we don't expect a huge effect, but
+it is measurable.
+
+* "Lazy" is what happens if you make all bean definitions lazy by
+default. Some Spring Boot autoconfiguration is not used at runtime, so
+you can save a bit of time by not using it.
+
+* "Tweaks" is the result of applying a few changes to Spring Framework
+and Spring Boot (which are pretty similar to what you will probably
+find in Spring Boot 2.1 and Spring 5.1). It also includes the JMX and
+config file location adjustments.
+
+The red bars are the same app but converted to functional bean
+registration. "Bunc" uses Spring Boot and "Func" does not (so it loses
+the benefit of config file parsing and other stuff that Spring Boot
+does on startup). They represent approximately 2x
+improvement over the baseline.
+
+The yellow bar is the same app but started from a completely warm JVM
+and the same classloader repeatedly. This is approximately 6.5 times
+faster than the baseline (200ms start time). It's a useful yardstick
+of what the JVM can do if you allow it to optimize itself. Who knows,
+maybe one day the optimizations could be cached and re-loaded quickly
+enough for this to be a cold start. Some features of the modern JVM
+(JEP 310 for example) are moving in this direction, but unfortunately
+are nowhere near achieving the same level of improvement.
+
+== Early Improvements in Spring Boot 2.1
+
+Spring Boot 2.1 is not even in the milestone as this work is being
+done, but we have managed to push a few changes into Spring Boot and
+Spring Framework 5.1. Here's a quick summary of the startup times:
+
+image::https://docs.google.com/spreadsheets/d/e/2PACX-1vQpSEfx0Y1W9aD3XVyn91-S0jtUp2DRCQSy_W_LMGyMR91YLAQ1mL7MiR1BRd8VzshvtuxzL6WAnlxf/pubchart?oid=1818051570&format=image[startup-2.1.x,width=75%]
+
+The "Freemarker" and "Tomcat" samples are from the Spring Boot
+project. The "Demo" and "Bunc" samples are the ones from this project.
+
+This is the effect on heap memory usage (plotting startup time vs max
+heap memory):
+
+image::https://docs.google.com/spreadsheets/d/e/2PACX-1vQpSEfx0Y1W9aD3XVyn91-S0jtUp2DRCQSy_W_LMGyMR91YLAQ1mL7MiR1BRd8VzshvtuxzL6WAnlxf/pubchart?oid=1685708082&format=image[heap-size-2.1.x,width=75%]
+
+Note that it is quite possible to run a simple Netty app in 10-12MB
+heap with Spring Boot 2.1 (but not with 2.0).
+
+Most if not all the improvements here some from the
+`AbstractAutowireCapableBeanFactory` changes (see below for
+details). The change is also readily visible in flame graphs from a
+profiler (see below for details):
+
+[cols="52a,48a"]
+|===
+|image::images/flame_20.svg[flame_20]
+|image::images/flame_21.svg[flame_21]
+
+| Spring Boot 2.0
+| Spring Boot 2.1
+|===
+
+The red/brown GC flame on the right is noticeably smaller in Spring
+Boot 2.1. This is a sign of less GC pressure caused by the bean
+factory change.
+
+== Detailed Notes and Numerical Results
+
 Laptop results:
 
 ```
