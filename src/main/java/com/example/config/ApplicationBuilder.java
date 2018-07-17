@@ -16,6 +16,7 @@
 package com.example.config;
 
 import java.lang.management.ManagementFactory;
+import java.time.Duration;
 import java.util.function.Consumer;
 
 import org.apache.commons.logging.Log;
@@ -28,8 +29,8 @@ import org.springframework.http.server.reactive.HttpHandler;
 import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 
-import reactor.ipc.netty.http.server.HttpServer;
-import reactor.ipc.netty.tcp.BlockingNettyContext;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
 
 /**
  * @author Dave Syer
@@ -40,12 +41,13 @@ public class ApplicationBuilder {
 	private static final String SHUTDOWN_LISTENER = "SHUTDOWN_LISTENER";
 	public static final String STARTUP = "Benchmark app started";
 	private static Log logger = LogFactory.getLog(StartupApplicationListener.class);
-	
+
 	public static void start(ConfigurableApplicationContext context) {
 		start(context, null);
 	}
 
-	public static void start(ConfigurableApplicationContext context, Consumer<BlockingNettyContext> callback) {
+	public static void start(ConfigurableApplicationContext context,
+			Consumer<DisposableServer> callback) {
 		if (!hasListeners(context)) {
 			((DefaultListableBeanFactory) context.getBeanFactory())
 					.registerDisposableBean(SHUTDOWN_LISTENER,
@@ -56,16 +58,22 @@ public class ApplicationBuilder {
 
 		HttpHandler handler = WebHttpHandlerBuilder.applicationContext(context).build();
 		ReactorHttpHandlerAdapter adapter = new ReactorHttpHandlerAdapter(handler);
-		HttpServer httpServer = HttpServer.create("localhost",
-				context.getEnvironment().getProperty("server.port", Integer.class, 8080));
-		httpServer.startAndAwait(adapter, callback(callback));
+		HttpServer httpServer = HttpServer.create().host("localhost").port(
+				context.getEnvironment().getProperty("server.port", Integer.class, 8080))
+				.handle(adapter);
+		httpServer.bindUntilJavaShutdown(Duration.ofSeconds(60), callback(callback));
 	}
 
-	private static Consumer<BlockingNettyContext> callback(Consumer<BlockingNettyContext> callback) {
+	private static Consumer<DisposableServer> callback(
+			Consumer<DisposableServer> callback) {
 		return context -> {
-			double uptime = ManagementFactory.getRuntimeMXBean().getUptime();
-			System.err.println("JVM running for " + uptime + "ms");
-			if (callback!=null) {
+			try {
+				double uptime = ManagementFactory.getRuntimeMXBean().getUptime();
+				System.err.println("JVM running for " + uptime + "ms");
+			}
+			catch (Throwable e) {
+			}
+			if (callback != null) {
 				callback.accept(context);
 			}
 		};
