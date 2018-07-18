@@ -31,6 +31,7 @@ import java.util.function.Supplier;
 
 import com.example.auto.AutoConfigurations.EnableActuatorAutoConfigurations;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -128,7 +129,7 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 
 	private void register(BeanDefinitionRegistry registry, ConditionEvaluator evaluator,
 			Class<?> type, StandardAnnotationMetadata metadata) {
-		for (Class<?> nested : type.getClasses()) {
+		for (Class<?> nested : type.getDeclaredClasses()) {
 			if (Modifier.isStatic(nested.getModifiers())) {
 				try {
 					StandardAnnotationMetadata nestedMetadata = new StandardAnnotationMetadata(
@@ -186,7 +187,7 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 			}
 		}
 		registry.registerBeanDefinition(type.getName(),
-				BeanDefinitionBuilder.rootBeanDefinition(type).getRawBeanDefinition());
+				BeanDefinitionBuilder.genericBeanDefinition(type).getRawBeanDefinition());
 		Set<MethodMetadata> methods = metadata.getAnnotatedMethods(Bean.class.getName());
 		Map<String, MethodMetadata> beans = new HashMap<>();
 		for (MethodMetadata method : methods) {
@@ -207,8 +208,12 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 				Supplier<?> supplier = () -> {
 					Object[] args = params(method, getBeanFactory());
 					ReflectionUtils.makeAccessible(method);
-					return ReflectionUtils.invokeMethod(method,
+					Object result = ReflectionUtils.invokeMethod(method,
 							getBeanFactory().getBean(type), args);
+					if (result == null) {
+						result = nullBean();
+					}
+					return result;
 				};
 				RootBeanDefinition definition = new RootBeanDefinition();
 				definition.setTargetType(beanClass);
@@ -219,6 +224,11 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 		catch (ArrayStoreException e) {
 			// TODO: use ASM to avoid this?
 		}
+	}
+
+	private Object nullBean() {
+		return BeanUtils.instantiateClass(ClassUtils.resolveClassName(
+				"org.springframework.beans.factory.support.NullBean", null));
 	}
 
 	private Object[] params(Method method, ConfigurableListableBeanFactory factory) {
