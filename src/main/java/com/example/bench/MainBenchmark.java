@@ -15,6 +15,7 @@
  */
 package com.example.bench;
 
+import com.example.auto.AutoApplication;
 import com.example.boot.BootApplication;
 import com.example.func.BuncApplication;
 import com.example.func.FuncApplication;
@@ -55,13 +56,19 @@ public class MainBenchmark {
 		state.setMainClass(BuncApplication.class);
 		state.isolated();
 	}
-	
+
 	@Benchmark
 	public void func(LauncherState state) throws Exception {
 		state.setMainClass(FuncApplication.class);
 		state.isolated();
 	}
-	
+
+	@Benchmark
+	public void auto(LauncherState state) throws Exception {
+		state.setMainClass(AutoApplication.class);
+		state.isolated();
+	}
+
 	@Benchmark
 	public void shared(LauncherState state) throws Exception {
 		state.shared();
