@@ -71,8 +71,19 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 		setResourceLoader(applicationContext);
 	}
 
-	public String[] config() {
-		return selectImports(new StandardAnnotationMetadata(AutoConfigurations.class));
+	public Class<?>[] config() {
+		String[] imports = selectImports(
+				new StandardAnnotationMetadata(AutoConfigurations.class));
+		Class<?>[] types = new Class<?>[imports.length];
+		int i = 0;
+		for (String config : imports) {
+			Class<?> type = ClassUtils.resolveClassName(config, getBeanClassLoader());
+			types[i++] = type;
+		}
+		org.springframework.boot.autoconfigure.AutoConfigurations autos = org.springframework.boot.autoconfigure.AutoConfigurations
+				.of(types);
+		return org.springframework.boot.autoconfigure.AutoConfigurations
+				.getClasses(autos);
 	}
 
 	@Target(ElementType.TYPE)
@@ -117,8 +128,7 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 			ConfigurableListableBeanFactory factory) throws Exception {
 		ConditionEvaluator evaluator = new ConditionEvaluator(registry, getEnvironment(),
 				getResourceLoader());
-		for (String config : config()) {
-			Class<?> type = ClassUtils.resolveClassName(config, getBeanClassLoader());
+		for (Class<?> type : config()) {
 			StandardAnnotationMetadata metadata = new StandardAnnotationMetadata(type);
 			if (evaluator.shouldSkip(metadata, ConfigurationPhase.REGISTER_BEAN)) {
 				continue;
@@ -132,12 +142,14 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 		for (Class<?> nested : type.getDeclaredClasses()) {
 			if (Modifier.isStatic(nested.getModifiers())) {
 				try {
-					StandardAnnotationMetadata nestedMetadata = new StandardAnnotationMetadata(
-							nested);
-					if (nestedMetadata.hasAnnotation(Configuration.class.getName())) {
-						if (!evaluator.shouldSkip(nestedMetadata,
-								ConfigurationPhase.REGISTER_BEAN)) {
-							register(registry, evaluator, nested, nestedMetadata);
+					if (!registry.containsBeanDefinition(nested.getName())) {
+						StandardAnnotationMetadata nestedMetadata = new StandardAnnotationMetadata(
+								nested);
+						if (nestedMetadata.hasAnnotation(Configuration.class.getName())) {
+							if (!evaluator.shouldSkip(nestedMetadata,
+									ConfigurationPhase.REGISTER_BEAN)) {
+								register(registry, evaluator, nested, nestedMetadata);
+							}
 						}
 					}
 				}
@@ -209,7 +221,7 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 					Object[] args = params(method, getBeanFactory());
 					ReflectionUtils.makeAccessible(method);
 					Object result = ReflectionUtils.invokeMethod(method,
-							getBeanFactory().getBean(type), args);
+							getBean(method, type), args);
 					if (result == null) {
 						result = nullBean();
 					}
@@ -218,12 +230,26 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 				RootBeanDefinition definition = new RootBeanDefinition();
 				definition.setTargetType(beanClass);
 				definition.setInstanceSupplier(supplier);
+				definition.setFactoryMethodName(method.getName());
+				// Bean name for factory...
+				definition.setFactoryBeanName(type.getName());
 				registry.registerBeanDefinition(method.getName(), definition);
 			}
 		}
 		catch (ArrayStoreException e) {
 			// TODO: use ASM to avoid this?
 		}
+	}
+
+	private Object getBean(Method method, Class<?> type) {
+		if (Modifier.isStatic(method.getModifiers())) {
+			return null;
+		}
+		// We have to use getBeansOfType() to avoid eager instantiation of everything when
+		// this is a factory for a bean factory post processor
+		Map<String, ?> beans = getBeanFactory().getBeansOfType(type, false, false);
+		// TODO: deal with no unique bean
+		return beans.values().iterator().next();
 	}
 
 	private Object nullBean() {
