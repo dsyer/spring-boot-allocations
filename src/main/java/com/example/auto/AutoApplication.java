@@ -79,7 +79,6 @@ public class AutoApplication implements Runnable, Closeable,
 				// super.load(context, sources);
 			}
 		};
-		application.setRegisterShutdownHook(false);
 		application.setDefaultProperties(Collections.singletonMap("boot.active", "true"));
 		application.addInitializers(this);
 		application.setApplicationContextClass(ReactiveWebServerApplicationContext.class);
