@@ -33,7 +33,6 @@ import com.example.auto.AutoConfigurations.EnableActuatorAutoConfigurations;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanCreationException;
-import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.DependencyDescriptor;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -42,13 +41,12 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.autoconfigure.AutoConfigurationImportSelector;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackage;
-import org.springframework.boot.context.properties.ConfigurationBeanFactoryMetadata;
-import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -116,16 +114,6 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 
 	protected void register(BeanDefinitionRegistry registry,
 			ConfigurableListableBeanFactory factory) throws Exception {
-		context.registerBean(AutowiredAnnotationBeanPostProcessor.class);
-		registry.registerBeanDefinition("configurationPostProcessor",
-				BeanDefinitionBuilder
-						.genericBeanDefinition(
-								ConfigurationPropertiesBindingPostProcessor.class)
-						.getRawBeanDefinition());
-		registry.registerBeanDefinition(ConfigurationBeanFactoryMetadata.BEAN_NAME,
-				BeanDefinitionBuilder
-						.genericBeanDefinition(ConfigurationBeanFactoryMetadata.class)
-						.getRawBeanDefinition());
 		ConditionEvaluator evaluator = new ConditionEvaluator(registry, getEnvironment(),
 				getResourceLoader());
 		for (String config : config()) {
@@ -163,6 +151,11 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 			if (props != null && props.length > 0) {
 				for (Object object : props) {
 					Class<?> imported = (Class<?>) object;
+					if (ImportBeanDefinitionRegistrar.class.isAssignableFrom(imported)) {
+						ImportBeanDefinitionRegistrar registrar = (ImportBeanDefinitionRegistrar) getBeanFactory()
+								.createBean(imported);
+						registrar.registerBeanDefinitions(metadata, registry);
+					}
 					try {
 						StandardAnnotationMetadata nestedMetadata = new StandardAnnotationMetadata(
 								imported);

@@ -19,10 +19,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
 
+import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.context.properties.ConfigurationBeanFactoryMetadata;
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
 import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.web.reactive.function.server.RouterFunction;
 
@@ -41,7 +45,7 @@ public class AutoApplication implements Runnable, Closeable,
 
 	public static final String MARKER = "Benchmark app started";
 
-	private GenericApplicationContext context;
+	private ConfigurableApplicationContext context;
 
 	public RouterFunction<?> userEndpoints() {
 		return route(GET("/"), request -> ok().body(Mono.just("Hello"), String.class))
@@ -79,12 +83,16 @@ public class AutoApplication implements Runnable, Closeable,
 		application.setDefaultProperties(Collections.singletonMap("boot.active", "true"));
 		application.addInitializers(this);
 		application.setApplicationContextClass(ReactiveWebServerApplicationContext.class);
-		application.run();
+		this.context = application.run();
 		System.err.println(MARKER);
 	}
 
 	@Override
 	public void initialize(GenericApplicationContext context) {
+		context.registerBean(AutowiredAnnotationBeanPostProcessor.class);
+		context.registerBean(ConfigurationPropertiesBindingPostProcessor.class);
+		context.registerBean(ConfigurationBeanFactoryMetadata.BEAN_NAME,
+				ConfigurationBeanFactoryMetadata.class);
 		context.addBeanFactoryPostProcessor(new AutoConfigurations(context));
 		context.registerBean(RouterFunction.class, () -> userEndpoints());
 	}

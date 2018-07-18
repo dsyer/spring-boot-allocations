@@ -16,9 +16,12 @@
 
 package com.example.bench;
 
+import com.example.auto.AutoApplication;
 import com.example.boot.BootApplication;
 import com.example.func.FuncApplication;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -34,11 +37,22 @@ public class LauncherStateTests {
 
 	@Rule
 	public OutputCapture output = new OutputCapture();
+	private LauncherState state;
+
+	@Before
+	public void init() {
+		state = new LauncherState();
+	}
+
+	@After
+	public void close() throws Exception {
+		if (state != null) {
+			state.close();
+		}
+	}
 
 	@Test
 	public void isolated() throws Exception {
-		// System.setProperty("bench.args", "-verbose:class");
-		LauncherState state = new LauncherState();
 		state.isolated();
 		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
@@ -71,6 +85,17 @@ public class LauncherStateTests {
 		// System.setProperty("bench.args", "-verbose:class");
 		LauncherState state = new LauncherState();
 		state.setMainClass(BootApplication.class);
+		state.shared();
+		output.flush();
+		assertThat(output.toString()).contains("Benchmark app started");
+		state.close();
+	}
+
+	@Test
+	public void auto() throws Exception {
+		// System.setProperty("bench.args", "-verbose:class");
+		LauncherState state = new LauncherState();
+		state.setMainClass(AutoApplication.class);
 		state.shared();
 		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
