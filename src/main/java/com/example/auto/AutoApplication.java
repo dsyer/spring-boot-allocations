@@ -17,7 +17,6 @@ package com.example.auto;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collections;
 
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.boot.SpringApplication;
@@ -27,6 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesBindin
 import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,7 +42,7 @@ public class AutoApplication implements Runnable, Closeable,
 
 	public static final String MARKER = "Benchmark app started";
 
-	private GenericApplicationContext context;
+	private ConfigurableApplicationContext context;
 
 	@GetMapping
 	public String home() {
@@ -75,11 +75,9 @@ public class AutoApplication implements Runnable, Closeable,
 				// super.load(context, sources);
 			}
 		};
-		application.setRegisterShutdownHook(false);
-		application.setDefaultProperties(Collections.singletonMap("boot.active", "true"));
 		application.addInitializers(this);
 		application.setApplicationContextClass(ReactiveWebServerApplicationContext.class);
-		application.run();
+		this.context = application.run();
 		System.err.println(MARKER);
 	}
 

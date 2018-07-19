@@ -19,6 +19,7 @@
 		<aspectj.version>1.8.13</aspectj.version>
 		<spring-boot.version>2.1.0.BUILD-SNAPSHOT</spring-boot.version>
 		<spring-cloud.version>Finchley.BUILD-SNAPSHOT</spring-cloud.version>
+		<netty.version>4.1.27.Final</netty.version>
 		<locator.version>1.0.0.RELEASE</locator.version>
 		<thin.version>1.0.12.RELEASE</thin.version>
 		<uberjar.name>benchmarks</uberjar.name>
@@ -46,6 +47,13 @@
 				<groupId>org.aspectj</groupId>
 				<artifactId>aspectjweaver</artifactId>
 				<version>${aspectj.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-bom</artifactId>
+				<version>${netty.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>

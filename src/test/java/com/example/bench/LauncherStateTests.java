@@ -40,8 +40,9 @@ public class LauncherStateTests {
 	private LauncherState state;
 
 	@Before
-	public void init() {
+	public void init() throws Exception {
 		state = new LauncherState();
+		state.start();
 	}
 
 	@After
@@ -56,50 +57,41 @@ public class LauncherStateTests {
 		state.isolated();
 		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
-		state.close();
 	}
 
 	@Test
 	public void shared() throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
-		LauncherState state = new LauncherState();
 		state.shared();
 		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
-		state.close();
 	}
 
 	@Test
 	public void func() throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
-		LauncherState state = new LauncherState();
 		state.setMainClass(FuncApplication.class);
 		state.shared();
 		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
-		state.close();
 	}
 
 	@Test
 	public void boot() throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
-		LauncherState state = new LauncherState();
 		state.setMainClass(BootApplication.class);
 		state.shared();
 		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
-		state.close();
 	}
 
 	@Test
 	public void auto() throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
-		LauncherState state = new LauncherState();
 		state.setMainClass(AutoApplication.class);
 		state.shared();
 		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
-		state.close();
 	}
 
 }
