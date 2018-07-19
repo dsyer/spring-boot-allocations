@@ -232,6 +232,12 @@ image::images/flame_micro.svg[cpu,width=50%]
 Note that there is very little time spent on garbage collection, and
 of course nothing from `ConfigurationClassPostProcessor`.
 
+NOTE: if you are using Spring Tool Suite be sure to shut down the
+invasive JVM agent attach feature (`Window >> Preferences >> Spring >>
+Boot Language Server Extension` uncheck all boxes) before you generate
+flame graphs from Java application launchers. Otherwise you get noise
+from Eclipse trying to connect to your app and inspect it.
+
 == Ideas
 
 * Up to now the strategy has been "use ASM and cache like crazy, run
@@ -381,8 +387,10 @@ benefits of Spring Boot. Results are pretty good (first sample under
 1000ms).
 
 * "auto" is a hybrid - it uses functional bean registrations generated
-using reflection from existing autoconfiguration. It is fully automated
-(unlike "func") and uses all the features of Spring Boot.
+using reflection from existing autoconfiguration. It is fully
+automated (unlike "func" and    "bunc") and uses all the features of Spring
+Boot. You can try this yourself by using the library
+https://github.com/dsyer/spring-boot-auto-reflect[spring-boot-auto-reflect].
 
 Some of the `@Configuration` beans are hard to use without registering
 them as beans
@@ -392,15 +400,17 @@ do register a `@Configuration` manually (not using `@Import` or
 calling of `@Bean` methods etc., but the CGLib proxy is skipped (might
 have side effects, so probably not a good idea in general).
 
-Here's a flame graph from the "func" sample:
+Here are some flame graphs from the functional bean samples:
 
-[cols="50a,50a"]
+[cols="33a,33a,33a"]
 |===
 |image::images/flame_func.svg[func]
 |image::images/flame_bunc.svg[bunc]
+|image::images/flame_auto.svg[auto]
 
 | "func"
 | "bunc"
+| "auto"
 |===
 
 Note that `ConfigurationClassPostProcessor` is not used at all. If it
