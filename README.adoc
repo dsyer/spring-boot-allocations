@@ -334,7 +334,9 @@ image::images/flame_demo.svg[cpu_cached,width=50%]
 See also https://jira.spring.io/browse/SPR-16973[SPR-16973],
 https://jira.spring.io/browse/SPR-8891[SPR-8891],
 https://jira.spring.io/browse/SPR-16959[SPR-16959],
-https://jira.spring.io/browse/SPR-15197[SPR-15197].
+https://jira.spring.io/browse/SPR-15197[SPR-15197],
+https://jira.spring.io/browse/SPR-17057[SPR-17057],
+https://jira.spring.io/browse/SPR-17063[SPR-17063].
 
 Getting rid of as much `@Configuration` as possible would give us a
 way to measure the effect of any inefficiencies in that area more
