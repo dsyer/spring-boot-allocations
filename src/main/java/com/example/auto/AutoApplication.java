@@ -19,6 +19,8 @@ import java.io.Closeable;
 import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
+import org.springframework.beans.factory.annotation.QualifierAnnotationAutowireCandidateResolver;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
 import org.springframework.boot.context.properties.ConfigurationBeanFactoryMetadata;
@@ -28,6 +30,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -83,9 +86,23 @@ public class AutoApplication implements Runnable, Closeable,
 
 	@Override
 	public void initialize(GenericApplicationContext context) {
-		context.getDefaultListableBeanFactory()
-				.addBeanPostProcessor(context.getDefaultListableBeanFactory()
-						.createBean(AutowiredAnnotationBeanPostProcessor.class));
+		DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+		if (beanFactory != null) {
+			if (!(beanFactory
+					.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
+				beanFactory
+						.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
+			}
+			// N.B. ContextAnnotationAutowireCandidateResolver is normal, but that's more expensive
+			// (checks for @Lazy)
+			if (!(beanFactory
+					.getAutowireCandidateResolver() instanceof QualifierAnnotationAutowireCandidateResolver)) {
+				beanFactory.setAutowireCandidateResolver(
+						new QualifierAnnotationAutowireCandidateResolver());
+			}
+			beanFactory.addBeanPostProcessor(
+					beanFactory.createBean(AutowiredAnnotationBeanPostProcessor.class));
+		}
 		AutoConfigurationPackages.register(context,
 				ClassUtils.getPackageName(getClass()));
 		context.registerBean(ConfigurationPropertiesBindingPostProcessor.class);

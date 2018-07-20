@@ -37,7 +37,7 @@ public class LazyInitBeanFactoryPostProcessor implements BeanFactoryPostProcesso
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory)
 			throws BeansException {
 
-		// Iterate over all bean, mark them as lazy if they are not in the exclusion list.
+		// Iterate over all beans, mark them as lazy if they are not in the exclusion list.
 		for (String beanName : beanFactory.getBeanDefinitionNames()) {
 			if (isLazy(beanName, beanFactory)) {
 				BeanDefinition definition = beanFactory.getBeanDefinition(beanName);
