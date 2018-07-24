@@ -48,6 +48,10 @@ might see a 2x improvement in startup time. Look at the
 `BuncApplication` to see how to start Spring Boot without the
 `@Configuration` class processor.
 
+Excluding `netty-transport-native-epoll` also boosts the functional
+bean apps by about 30ms (but not noticeably the non-functional ones),
+so maybe a few percent.
+
 == Summary of Results
 
 Here is a graph that summarizes the results, in terms of how the
@@ -574,7 +578,9 @@ Apparently an app starts up quicker (20ms or so) if there are no
 
 == GenericApplicationListenerAdapter
 
-See https://jira.spring.io/browse/SPR-16970[SPR-16970] and https://github.com/spring-projects/spring-boot/issues/13566[Boot#13566].
+See https://jira.spring.io/browse/SPR-16970[SPR-16970],
+https://jira.spring.io/browse/SPR-17070[SPR-17070] and
+https://github.com/spring-projects/spring-boot/issues/13566[Boot#13566].
 
 There's a lot of cacheing already in
 `AbstractApplicationEventMulticaster`, but it still shows up as a blip
