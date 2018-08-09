@@ -713,6 +713,27 @@ load more classes and have more beans. The GC pressure is also still a
 problem. Both Jetty and Undertow perform pretty much identically to
 Tomcat.
 
+== Flight Recorder
+
+Start your app with the Oracle JDK and some special flags
+
+```
+-XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=delay=0s,duration=120s,name=recording,filename=/tmp/recording.jfr,settings=profile
+```
+
+and it will record data in a form that can be read by `jmc` (from the JDK distro). You can open it up and see useful graphical presentations like this:
+
+image::images/jmc.png[jmc,width=60%]
+
+The sampling isn't as accurate as async profiler, so you get variable
+results for short startups. If you can run the process in a tight
+loop, so the thing you are trying to probe lasts a bit longer, then
+that will help. We have been able to find GC pressure sources and
+squish them this way (e.g. the `AbstractAutowireCapableBeanFactory`
+optimizations came from this approach).
+
+Useful link: https://docs.oracle.com/javase/8/docs/technotes/guides/troubleshoot/tooldescr004.html#BABHCDEA
+
 == Serializable Class Metadata
 
 Using Kryo we were able to cache and re-load configuration class
