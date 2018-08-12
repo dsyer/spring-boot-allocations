@@ -207,6 +207,14 @@ Total time 200ms.
 
 == Flame Graphs
 
+On linux, prepare your system to accept the necessary system calls:
+
+```
+$ echo 1 | sudo tee /proc/sys/kernel/perf_event_paranoid
+```
+
+Otherwise you will see a lot of `perf_event_open failed: Permission denied` when you run the profiler.
+
 Download the https://github.com/jvm-profiling-tools/async-profiler[profiler] and run the app with these arguments:
 
 ```
