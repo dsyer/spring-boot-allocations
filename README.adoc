@@ -649,7 +649,40 @@ faster, but that's a step in the right direction. Maybe that's a hint
 about how to improve it, especially for the early bindings.  It's
 almost as fast if you just wrap the Environment in a
 ConfigurationPropertySource that simply mirrors
-Environment.getProperty() (the "wrapped" benchmark);
+Environment.getProperty() (the "wrapped" benchmark).
+
+== ClassUtils
+
+See https://jira.spring.io/browse/SPR-17169[SPR-17169].
+
+Spring core `ClassUtils` is always an annoying blip on the flame
+graphs. It pops up because it indirectly calls
+`java.lang.invoke.MethodHandleNatives.linkCallSite()` which is
+expensive it seems, or at least when called in a static
+initializer. You can avoid the cost completely if you switch from
+iterating over a map using a lambda to explicit old-style iteration:
+
+```java
+		for (Map.Entry<Class<?>, Class<?>> entry : primitiveWrapperTypeMap.entrySet()) {
+			Class<?> key = entry.getKey();
+			Class<?> value = entry.getValue();
+			primitiveTypeToWrapperMap.put(value, key);
+			registerCommonClasses(key);
+		}
+```
+
+instead of
+
+```java
+		primitiveWrapperTypeMap.forEach((key, value) -> {
+			primitiveTypeToWrapperMap.put(value, key);
+			registerCommonClasses(key);
+		});
+```
+
+Unfortunately, as the comments in that issue above show, the only
+effect is to push the problem around - there is no measureable
+improvement in startup time.
 
 == JVM Command Line
 
