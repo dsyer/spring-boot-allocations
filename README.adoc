@@ -500,8 +500,15 @@ won't be in this app). Some will never be needed
 
 == ConfigurationClassPostProcessor
 
+`ConfigurationClassPostProcessor` does a lot of delving into unannotated
+classes looking for `@Bean` annotations. We could make that optional and
+provide a way for users (or Spring Boot) to switch it off. We could
+also short circuit the annotation processing in the case that there is
+a `spring.components` index because we know then which classes have
+`@Configuration`.
+
 We created a custom `ConfigurationClassPostProcessor` that only
-processes classes that are present in spring.components. It doesn't
+processes classes that are present in `spring.components`. It doesn't
 make much difference in a vanilla Spring Boot app. But if you use it
 in an app that doesn't have any `@Configuration` it doesn't cost
 anything (unlike the vanilla CCPP). Spring Boot jars have
