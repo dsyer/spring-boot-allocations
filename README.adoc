@@ -863,6 +863,55 @@ A factor of 2 is almost not worth chasing at this level. A factor of
 as possible, and reflection. These results are probably independent of
 the GC issues experienced by the full Spring Boot application startup.
 
+More extensive benchmarks:
+
+```
+Benchmark                       Mode  Cnt          Score         Error  Units
+BeanCreationBenchmark.proce    thrpt    5       1063.410 ±    1091.844  ops/s
+BeanCreationBenchmark.unpro    thrpt    5      47377.737 ±    8479.910  ops/s
+BeanCreationBenchmark.funcs    thrpt    5      35373.613 ±    5215.308  ops/s
+BeanCreationBenchmark.simple   thrpt    5     564198.322 ±   28753.021  ops/s
+```
+
+* "proce" is a 3-bean `@Configuration` processed with a `GenericApplicationContext`
+
+* "unpro" is the same thing but without the `ConfigurationClassPostProcessor` (so just a bean with the same type as the `@Configuration`)
+
+* "funcs" is the same 3 beans but using the functional bean regsitration style (so no `ConfigurationClassPostProcessor`)
+
+* "simple" is the same 3 beans but registered or created directly with a `DefaultListableBeanFactory`
+
+The "proce" sample is quite variable on startup time (hence the error bars). The most interesting contrast is probably between "proce" and "funcs" since these are fully-leaded Spring applications, albeit very simple - "funcs" is 35 times faster(!).
+
+== AnnotationElementUtils
+
+This project contains a hacked version of `AnnotationElementUtils`
+which uses reflection to extract annotation data from classes and
+methods, instead of using the official public methods in `Class` and
+`Method`. The public methods create a lot of garbage collection
+pressure because they create copies of the annotation arrays every
+time they are called.
+
+Another source of GC pressure comes from `sun.reflect.annotation` in
+the JDK. If you replace `AnnotationInvocationHandler` with a version
+that does not call `Method.getParameterTypes()` on every method call,
+and caches the first element of the array when it does call it, you
+can reduce the GC on startup by a further large margin. (To do this
+you have to manipulate the boot classpath in the java command line.)
+
+[cols="52a,48a"]
+|===
+|image::images/flame_before.svg[flame_before]
+|image::images/flame_after.svg[flame_after]
+
+| Before
+| After
+|===
+
+The "Before" graph is worryingly worse, GC-wise, than the same graph
+produced a month ago (as of 2018/08/14). Might be a sign of some
+regression in Spring.
+
 == Java 10 Features
 
 Java 10 is slower than Java 8 in general (so far at least), but it has
