@@ -75,6 +75,7 @@ public class BinderBenchmark {
 		private MapConfigurationPropertySource source;
 
 		protected void init() {
+			super.init();
 			Map<String, String> map = new HashMap<>();
 			map.put("spring.profiles.active", "one,two");
 			source = new MapConfigurationPropertySource(map);
@@ -93,6 +94,7 @@ public class BinderBenchmark {
 		private ConfigurationPropertySource source;
 
 		protected void init() {
+			super.init();
 			source = new WrappedConfigurationPropertySource(environment);
 		}
 
@@ -120,16 +122,17 @@ public class BinderBenchmark {
 
 	public static abstract class EnvironmentState {
 
-		ConfigurableEnvironment environment = new StandardEnvironment();
+		ConfigurableEnvironment environment;
 
 		public EnvironmentState() {
-			MutablePropertySources propertySources = environment.getPropertySources();
-			propertySources.addLast(new MapPropertySource("profiles",
-					Collections.singletonMap("spring.profiles.active", "one,two")));
 			init();
 		}
 
 		protected void init() {
+			environment = new StandardEnvironment();
+			MutablePropertySources propertySources = environment.getPropertySources();
+			propertySources.addLast(new MapPropertySource("profiles",
+					Collections.singletonMap("spring.profiles.active", "one,two")));
 		};
 
 	}

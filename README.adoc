@@ -706,10 +706,14 @@ $ java -noverify -XX:TieredStopAtLevel=1 -Djava.security.egd=file:/dev/./urandom
 ```
 
 ```
-Benchmark           Mode  Cnt  Score   Error  Units
-MainBenchmark.demo    ss   10  0.661 ± 0.056   s/op
-MainBenchmark.bunc    ss   10  0.369 ± 0.054   s/op
-MainBenchmark.func    ss   10  0.304 ± 0.045   s/op
+Benchmark             Mode  Cnt  Score   Error  Units
+MainBenchmark.auto      ss   10  0.515 ± 0.043   s/op
+MainBenchmark.boot      ss   10  0.616 ± 0.046   s/op
+MainBenchmark.bunc      ss   10  0.388 ± 0.036   s/op
+MainBenchmark.demo      ss   10  0.688 ± 0.048   s/op
+MainBenchmark.func      ss   10  0.331 ± 0.027   s/op
+MainBenchmark.manual    ss   10  0.579 ± 0.036   s/op
+MainBenchmark.shared    ss   10  0.114 ± 0.035   s/op
 ```
 
 == Tomcat
@@ -908,16 +912,12 @@ you have to manipulate the boot classpath in the java command line.)
 
 [cols="52a,48a"]
 |===
-|image::images/flame_before.svg[flame_before]
+|image::images/flame_demo.svg[flame_before]
 |image::images/flame_after.svg[flame_after]
 
 | Before
 | After
 |===
-
-The "Before" graph is worryingly worse, GC-wise, than the same graph
-produced a month ago (as of 2018/08/14). Might be a sign of some
-regression in Spring.
 
 == Java 10 Features
 
