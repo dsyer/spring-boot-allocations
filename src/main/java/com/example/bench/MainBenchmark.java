@@ -18,6 +18,7 @@ package com.example.bench;
 import com.example.auto.AutoApplication;
 import com.example.boot.BootApplication;
 import com.example.func.BuncApplication;
+import com.example.func.CuncApplication;
 import com.example.func.FuncApplication;
 import com.example.manual.ManualApplication;
 
@@ -48,6 +49,12 @@ public class MainBenchmark {
 	@Benchmark
 	public void manual(LauncherState state) throws Exception {
 		state.setMainClass(ManualApplication.class);
+		state.isolated();
+	}
+
+	@Benchmark
+	public void cunc(LauncherState state) throws Exception {
+		state.setMainClass(CuncApplication.class);
 		state.isolated();
 	}
 
