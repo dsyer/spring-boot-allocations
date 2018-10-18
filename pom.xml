@@ -17,10 +17,9 @@
 		<java.version>1.8</java.version>
 		<jmh.version>1.16</jmh.version>
 		<spring-boot.version>2.1.0.BUILD-SNAPSHOT</spring-boot.version>
-		<spring-framework.version>5.1.0.BUILD-SNAPSHOT</spring-framework.version>
 		<spring-cloud.version>Greenwich.BUILD-SNAPSHOT</spring-cloud.version>
 		<locator.version>1.0.0.RELEASE</locator.version>
-		<thin.version>1.0.15.RELEASE</thin.version>
+		<thin.version>1.0.17.RELEASE</thin.version>
 		<uberjar.name>benchmarks</uberjar.name>
 		<start-class>org.openjdk.jmh.Main</start-class>
 	</properties>
@@ -36,13 +35,6 @@
 				<groupId>org.apache.maven</groupId>
 				<artifactId>maven-settings-builder</artifactId>
 				<version>3.3.9</version>
-			</dependency>
-			<dependency>
-				<groupId>org.springframework</groupId>
-				<artifactId>spring-framework-bom</artifactId>
-				<version>${spring-framework.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.boot</groupId>

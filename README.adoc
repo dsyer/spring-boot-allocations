@@ -658,6 +658,20 @@ almost as fast if you just wrap the Environment in a
 ConfigurationPropertySource that simply mirrors
 Environment.getProperty() (the "wrapped" benchmark).
 
+UPDATE: In snapshots after 2.1.0.M4 some big changes can be seen:
+
+```
+Benchmark                 Mode  Cnt       Score       Error  Units
+BinderBenchmark.binder   thrpt    5    6035.631 ±   929.405  ops/s
+BinderBenchmark.direct   thrpt    5  778681.617 ± 12206.544  ops/s
+BinderBenchmark.map      thrpt    5  182403.289 ±  2743.654  ops/s
+BinderBenchmark.wrapped  thrpt    5  122462.052 ±  3120.594  ops/s
+```
+
+It's at the point where `Binder` is only showing up in startup in the
+`LoggingApplicationListener` (2.5% of startup time). Binding to a
+`Map` is still slow, even if there are no entries to bind.
+
 == ClassUtils
 
 See https://jira.spring.io/browse/SPR-17169[SPR-17169].
