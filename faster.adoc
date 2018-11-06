@@ -1,0 +1,272 @@
+= How Fast is Spring?
+
+Performance has always been one of the top priorities of the Spring Engineering team, and we are continually monitoring and responding to changes and to feedback. Some fairly intense and precise work has been done recently (in the last 2-3 years) and this article is here to help you to find the results of that work and to learn how to measure and improve performance in your own applications. The headline is that Spring Boot 2.1 and Spring 5.1 have some quite nice optimizations for startup time and heap usage. Here's a graph made by measuring startup time for heap constrained apps:
+
+image::https://docs.google.com/spreadsheets/d/e/2PACX-1vQpSEfx0Y1W9aD3XVyn91-S0jtUp2DRCQSy_W_LMGyMR91YLAQ1mL7MiR1BRd8VzshvtuxzL6WAnlxf/pubchart?oid=336485057&format=image[heap-size-2.1.x,width=75%]
+
+As you squeeze the available heap, and application generally isn't affected on startup, until it reaches a critical point. The characteristic "hockey stick" shape of the graphs shows the point at which garbage collection loses the fight and the app no longer starts up at all. We see from the graphs that it is quite possible to run a simple Netty app in 10MB heap with Spring Boot 2.1 (but not with 2.0). It is also a bit faster in 2.1 compared to 2.0.
+
+Most of the detail here refers specifically to measurements and optimizations for startup time, but heap memory consumption is also something that is very relevant because constraints on heap size generally lead to slower startup (see the graph above). There are other aspects of performance that we could (and will) focus on, particularly where annotations are being used for HTTP request mapping, for example; but those concerns will have to wait for another, separate write up.
+
+When all things are considered, remember that Spring was designed _ab initio_ to be lightweight, and actually does very little work unless you ask it to. There are many *optional* features, so you don't have to use them. Here are some quick summary points:
+
+* Packaging: an exploded jar with the application's own main is always faster
+* Server: there is no measureable difference between Tomcat, Jetty and Undertow
+* Netty is a _bit_ faster on startup - you won't notice in a large app
+* The more features you use, the more classes are loaded
+* Functional bean definitions rule
+* A minimal Spring Boot app with an HTTP endpoint starts in <1sec and uses <10MB heap
+
+Some links:
+
+* https://github.com/dsyer/spring-boot-startup-bench - older benchmarks (back to Spring Boot 1.3), fat jar data
+* https://github.com/dsyer/spring-boot-startup-bench/blob/master/static/README.adoc[/static] benchmarks in the same repo - newer, explores classes loaded correlation
+* https://github.com/dsyer/spring-boot-startup-bench/blob/master/static/README.adoc[/flux] benchmarks in the same repo - WebFlux
+*  https://spring.io/blog/2018/10/22/functional-bean-registrations-in-spring-cloud-function - blog on functional beans in Spring Cloud Function
+* Spring Fu: https://github.com/spring-projects/spring-fu
+* https://github.com/dsyer/spring-boot-allocations - benchmarks for functional beans and GC pressure
+* https://github.com/dsyer/spring-boot-micro-apps - functional beans and AOT (same code as the "allocations" project but sample apps not benchmarks)
+
+== TL;DR How do I make my app go faster?
+
+(Copied from https://github.com/dsyer/spring-boot-allocations[here].)  You are mostly going to have to drop features, so not all of these suggestions will be possible for all apps. Some are not so painful, and actually pretty natural in a container, e.g. if you are building a docker image it's better to unpack the jar and put application classes in a different filesystem layer anyway.
+
+* Classpath exclusions from Spring Boot web starters:
+  - Hibernate Validator
+  - Jackson (but Spring Boot actuators depend on it). Use
+    Gson if you need JSON rendering (only works with MVC out of the box).
+  - Logback: use `slf4j-jdk14` instead
+* Use the `spring-context-indexer`. It's not going to add much, but every little helps.
+* Don't use actuators if you can afford not to.
+* Use Spring Boot 2.1 and Spring 5.1.
+* Fix the location of the
+https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-application-property-files[Spring Boot config file(s)]
+with `spring.config.location` (command line argument or System property etc.).
+Example for testing in IDE:
+`spring.config.location=file://./src/main/resources/application.properties`.
+* Switch off JMX if you don't need it with `spring.jmx.enabled=false`
+* Make bean definitions lazy by default. There's nothing in Spring
+Boot that does this, but there's a `LazyInitBeanFactoryPostProcessor`
+in https://github.com/dsyer/spring-boot-allocations[this project] you can copy.
+* Unpack the fat jar and run with an explicit classpath.
+* Run the JVM with `-noverify`. Also consider `-XX:TieredStopAtLevel=1`
+(that will slow down the JIT later at the expense of the saved startup time).
+
+A more extreme choice is to re-write all your application configuration using functional bean definitions. This includes all the Spring Boot autoconfiguration you are using, most of which can be re-used, but it's stll manual work to identify which classes to use and register all the bean definitions. If you try this approach you might see a 2x improvement in startup time. Look at the `BuncApplication` in the https://github.com/dsyer/spring-boot-micro-apps[micro apps] to see how to start Spring Boot without the `@Configuration` class processor.
+
+Excluding `netty-transport-native-epoll` also boosts the startup time by 30ms or so (Linux only). This is a regression since Spring Boot 2.0, so once we understand it a bit better we can probably eliminate it.
+
+== Some Basic Benchmarks
+
+Here is a subset of the https://github.com/dsyer/spring-boot-startup-bench/blob/master/static/README.adoc[static benchmarks] from https://github.com/dsyer/spring-boot-startup-bench. Each app is started with a new JVM (separate process) per application startup, and has an explicit classpath (not fat jar). The app is always the same, but with different levels of automatic (and in some cases manual) configuration. The "Score" is startup time in seconds, measured as the time from starting the JVM to seeing a marker in the logger output (at this point the app is up and accepting HTTP connections).
+
+```
+Benchmark   (sample) Mode  Cnt  Score   Error  Units Beans Classes
+MainBenchmark  actr  avgt   10  1.316 ± 0.060   s/op 186   5666
+MainBenchmark  jdbc  avgt   10  1.237 ± 0.050   s/op 147   5625
+MainBenchmark  demo  avgt   10  1.056 ± 0.040   s/op 111   5266
+MainBenchmark  slim  avgt   10  1.003 ± 0.011   s/op 105   5208
+MainBenchmark  thin  avgt   10  0.855 ± 0.028   s/op 60    4892
+MainBenchmark  lite  avgt   10  0.694 ± 0.015   s/op 30    4580
+MainBenchmark  func  avgt   10  0.652 ± 0.017   s/op 25    4378
+```
+
+NOTE: The host machine is "tower", i7, 3.4GHz, 32G RAM, SSD.
+
+* Actr: same as "demo" sample plus Actuator
+* Jdbc: same as "demo" sample plus JDBC
+* Demo: vanilla Spring Boot MVC app with one endpoint (no Actuator)
+* Slim: same thing but explicitly `@Imports` all configuration
+* Thin: reduce the `@Imports` down to a set of 4 that are needed for the endpoint
+* Lite: copy the imports from "thin" and make them into hard-coded, unconditional configuration
+* Func: extract the configuration methods from "lite" and register bits of it using the function bean API
+
+Generally speaking, the more features are used, the more classes that are loaded, and also the more beans are created in the `ApplicationContext`. The correlation is actually very tight between startup time and number of classes loaded (much tighter than versus number of beans). Here's a graph compiled from that data and extended with a range of other things, like JPA, bits of Spring Cloud, all the way up to the "kitchen sink" with everything on the classpath including Zuul and Sleuth:
+
+image::https://docs.google.com/spreadsheets/d/e/2PACX-1vR8B4l5WkWf-9gZWmIYTkmBWM7YWf5bRg852OakrV0G2-vtfM_UkVNRC3cTVk1079HagnMVHYZnvbib/pubchart?oid=976086548&format=image[width=75%]
+
+The data for the graph can be scraped from the benchmark report if you run the "MainBenchmark" and the "StripBenchmark" in the static benchmarks (the table above is old data from a time when they were both in the same class). There are instructions about how to do that in the README.
+
+== Garbage Collection Pressure
+
+While it is true, and measureable, that more classes loaded (i.e. more features) is directly correlated with slower startup time, there are some subtleties, and one of the most important and also the slipperiest to analyse is garbage collection (GC). Garbage collection can be a really big deal for long running applications, and we have all heard stories of long GC pauses in large applications (the bigger your heap the longer you are likely to wait). Custom GC strategies are big business and an important tool for tweaking long-running, especially large applications. On startup there are some other things happening, but those can be related to garbage collection as well, and many of the optimizations in Spring 5.1 and Spring Boot 2.1 were obtained by analysing those.
+
+The main thing to look out for is tight loops with temporary objects being created and discarded. Some code in that pattern is unavoidable, and some is out of our control (e.g. it's in the JDK itself), and all we can do in that case is try not to call it. But these hordes of temporary objects create pressure on garbage collection and swell the heap, even if they never actually make it onto the heap per se. You can often see the effect of the extra GC pressure as a spike in heap size, if you can catch it happening. Flame graphs from https://github.com/jvm-profiling-tools/async-profiler[async-profiler] are a better tool because they are allow more fine-grained sampling than most profiling tools, and because they are visually very striking.
+
+Here's an example flame graph from the HTTP sample app we have been benchmarking, with Spring Boot 2.0 and with Spring Boot 2.1:
+
+[cols="52a,48a"]
+|===
+|image::images/flame_20.svg[flame_20]
+|image::images/flame_21.svg[flame_21]
+
+| Spring Boot 2.0
+| Spring Boot 2.1
+|===
+
+The red/brown GC flame on the right is noticeably smaller in Spring Boot 2.1. This is a
+sign of less GC pressure as a result of a https://github.com/spring-projects/spring-framework/commit/81cb740e[change] in the bean factory internals. The Spring Framework issue behind one of the main changes is https://jira.spring.io/browse/SPR-16918[here] if you want to look at the details.
+
+Recognizing that GC pressure is an issue is one thing (and async-profiler is the best tool we have found), but locating its source is something of an art. The best tool we have found for that is Flight Recorder (or Java Mission Control) which is part of the OpenJDK release, although it used to be only in the Oracle distribution. The problem with Flight Recorder is that the sampling rate is not really high enough to capture enough data on startup, so you have to try and build tight loops that do something you are interested in, or suspect might be contributing to the problem, and analyse those over a longer period (a few seconds or more). This leads to additional insight, but no real data on whether a "real" application will benefit from changing the hotspot. Much of the code in the https://github.com/dsyer/spring-boot-allocations[spring-boot-allocations] project is this kind of code: main methods that run tight loops focusing on suspected hotspots that can then be analyzed with Flight Controller.
+
+== WebFlux and Micro Apps
+
+We might expect some variations between apps using a Servlet container and those using the newer reactive runtime from Netty introduced in Spring 5.0. The benchmark figures above are using Tomcat. There are some similar measurements in a different subdirectory of the same repo. Here are the results from the https://github.com/dsyer/spring-boot-startup-bench/blob/master/flux/README.adoc[flux benchmarks]:
+
+```
+Benchmark            (sample)  Mode  Cnt  Score   Error  Units Classes
+MainBenchmark.main       demo    ss   10  1.081 ± 0.075   s/op 5779
+MainBenchmark.main       jlog    ss   10  0.933 ± 0.065   s/op 4367
+MiniBenchmark.boot       demo    ss   10  0.579 ± 0.041   s/op 4138
+MiniBenchmark.boot       jlog    ss   10  0.486 ± 0.020   s/op 2974
+MiniBenchmark.mini       demo    ss   10  0.538 ± 0.009   s/op 3138
+MiniBenchmark.mini       jlog    ss   10  0.420 ± 0.011   s/op 2351
+MiniBenchmark.micro      demo    ss   10  0.288 ± 0.006   s/op 2112
+MiniBenchmark.micro      jlog    ss   10  0.186 ± 0.006   s/op 1371
+```
+
+All the apps have a single HTTP endpoint, just like the apps in the static benchmarks (Tomcat, Servlet). All are a bit faster than Tomcat, but not much (maybe 10%). Note that the fastest one ("micro jlog") is up and running in less than 200ms. Spring is really not doing very much there, and all the cost is basically getting the classes loaded for the features needed by the app (an HTTP server).
+
+Notes:
+
+* The `MainBenchmark.main(demo)` is full Boot + Webflux + autoconfiguration.
+* The `boot` samples use Spring Boot but no autoconfiguration.
+* The `jlog` samples exclude logback as well as Hibernate Validator and Jackson.
+* The `mini` samples do not use Spring Boot (just `@EnableWebFlux`).
+* The `micro` samples do not use `@EnableWebflux` either, just a manual route registration.
+
+The mini jlog sample runs in about 46MB memory (10 heap, 36 non-heap). The micro jlog sample runs in 38MB (8 heap, 30 non-heap). Non-heap is really what matters for these smaller apps. They are all included on the scatter plot above, so they are consistent with the general correlation between startup time and classes loaded.
+
+== Classpath Exclusions
+
+Your mileage my vary, but consider excluding:
+
+* Jackson (`spring-boot-starter-json`): it's not super expensive (maybe 50ms on startup), but Gson is faster, and also has a smaller footprint.
+* Logback (`spring-boot-starter-logging`): still the best, most flexible logging library, but all that flexibility comes with a cost.
+* Hibernate Validator (`org.hibernate.validator:hibernate-validator`): does a lot of work on startup, so if you are not using it, exclude it.
+* Actuators (`spring-boot-starter-actuator`): a really useful feature set, so hard to recommend removing it completely, but if you aren't using it, don't put it on the classpath.
+
+== Spring Tweaks
+
+* Use the `spring-context-indexer`. It's a drop in on the classpath, so very easy to install. It only works on your application's own `@Component` classes, and really only likely to be a very small boost to startup time for all but the largest (1000s beans) applications. But it is measureable.
+* Don't use actuators if you can afford not to.
+* Use Spring Boot 2.1 and Spring 5.1. Both have small, but important optimizations, especially regarding garbage collection pressure on startup. This is what enables newer apps to start up with less heap.
+* Use explicit `spring.config.location`. Spring Boot looks in quite a lot of locations for `application.properties` (or `.yml`), so if you know exactly where it is, or might be at runtime, you can shave off a few percent.
+* Switch off JMX: `spring.jmx.enabled=false`. If you aren't using it you don't need to pay the cost of creating and registering the MBeans.
+* Make bean definitions lazy by default. There's nothing in Spring Boot that does this, but there's a `LazyInitBeanFactoryPostProcessor` in https://github.com/dsyer/spring-boot-allocations[this project] you can copy. It is just a `BeanFactoryPostProcessor` that switches all beans to `lazy=true`.
+* Spring Data has some lazy initialization features now (in Lovelace, or Spring Boot 2.1). In Spring Boot you can just set `spring.data.jpa.repositories.bootstrap-mode=lazy` - for large apps with 100s of entities improves startup time by more than a factor of 10.
+* Use functional bean definitions instead of `@Configuration`. More detail later on this.
+
+== JVM Tweaks
+
+Useful command line tweaks for startup time:
+
+* `-noverify` - pretty much harmless, has a big impact. Might not be permitted in a low trust environment.
+* `-XX:TieredStopAtLevel=1` - potentially degrades performance later, after startup, since it restricts the JVM ability to optimize itself at runtime. Your mileage my vary but it will have a measureable impact on startup time.
+* `-Djava.security.egd=file:/dev/./urandom` - not really a thing any more, but older versions of Tomcat used to really need it. Might have a small effect on modern apps with or without Tomcat if anyone is using random numbers.
+* `-XX:+AlwaysPreTouch` - small but possibly measurable effect on startup.
+* Use an explicit classpath - i.e. explode the fat jar and use `java -cp ...`. Use the application's native main class. More detail on this later.
+
+=== Class Data Sharing
+
+Class Data Sharing (CDS) was a commercial only feature of the Oracle JDK since version 7, but it has also available in https://www.eclipse.org/openj9/[OpenJ9] (the open source version of the IBM JVM) and now in OpenJDK since version 10. OpenJ9 has had CDS for a long time, and it is super easy to use in that platform. It was designed for optimizing memory usage, not startup time, but those two concerns are not unrelated.
+
+You can run OpenJ9 in the same way as a regular OpenJDK JVM, but the CDS is switched on with different command line flags. It's super convenient with OpenJ9 because all you need is `-Xshareclasses`. It's probably also a good idea to increase the size of the cache, e.g. `-Xscmx128m`, and to hint that you want a fast startup with `-Xquickstart`. These flags are always on in the benchmarks if they detect the OpenJ9 or IBM JVM.
+
+Benchmark results with OpenJ9 and CDS:
+
+```
+Benchmark            (sample)  Mode  Cnt  Score   Error  Units Classes
+MainBenchmark.main       demo    ss   10  0.939 ± 0.027   s/op 5954
+MainBenchmark.main       jlog    ss   10  0.709 ± 0.034   s/op 4536
+MiniBenchmark.boot       demo    ss   10  0.505 ± 0.035   s/op 4314
+MiniBenchmark.boot       jlog    ss   10  0.406 ± 0.085   s/op 3090
+MiniBenchmark.mini       demo    ss   10  0.432 ± 0.019   s/op 3256
+MiniBenchmark.mini       jlog    ss   10  0.340 ± 0.018   s/op 2427
+MiniBenchmark.micro      demo    ss   10  0.204 ± 0.019   s/op 2238
+MiniBenchmark.micro      jlog    ss   10  0.152 ± 0.045   s/op 1436
+```
+
+That is quite impressive in some cases (25% faster than without CDS for the fastest apps). Similar results can be achieved with OpenJDK: includes CDS (with a less convenient command line interface) since Java 10. Here's a scatter plot of the smaller end of the classes loaded versus startup time relationship, with regular OpenJDK (no CDS) in red and OpenJ9 (with CDS) in blue:
+
+image::https://docs.google.com/spreadsheets/d/e/2PACX-1vQpSEfx0Y1W9aD3XVyn91-S0jtUp2DRCQSy_W_LMGyMR91YLAQ1mL7MiR1BRd8VzshvtuxzL6WAnlxf/pubchart?oid=1689271723&format=image[width=75%]
+
+Java 10 and 11 also have an experimental feature called Ahead of Time compilation (AOT) that lets you build a native image from a Java application. Potentially this is super fast on startup, and most apps that can successfully be converted are indeed very fast to start up (by a factor of 10 for the small apps in the benchmarks here). Many "real life" applications cannot yet be converted. AOT is implemented using  https://github.com/oracle/graal[Graal VM], which we will come back to later.
+
+== Lazy Subsystems
+
+We mentioned lazy bean definitions and the idea of a `LazyInitBeanFactoryPostProcessor` being generally of interest above. The benefits are clear, especially for a Spring Boot application with lots of autoconfigured beasn that you never uese, but also limited because even if you don't use them sometimes they needto be created to satisfy a dependency. Those limitations could possibly be addressed by another idea that is more of a research topic, and that is to break down application into modules and initialize each one separately on demand.
+
+To do this you would need to be able to precisely identify a subsystem in your source code and mark it somehow. An example of such a subsystem would be the actuators in Spring Boot, which we can identify mainly by the package names of the auto configuration classes. There is a prototype in this project: https://github.com/dsyer/spring-boot-lazy-actuator[Lazy Actuator]. You can just add it to an existing project and it converts all the actuator endpoints into lazy beans which will only be instantiated when they are used, saving about 40% of the startup time in a micro application like the canonical one-endpoint HTTP sample app in the benchmarks above. E.g. (for Maven):
+
+.pom.xml
+```xml
+<dependency>
+	<groupId>org.springframework.boot.experimental</groupId>
+	<artifactId>spring-boot-lazy-actuator</artifactId>
+	<version>1.0.0.BUILD-SNAPSHOT</version>
+</dependency>
+```
+
+To make this kind of pattern more mainstream would probably take some changes in the core Spring programming model, to allow the subsystems to be identified and dealt with in special ways at runtime. It also increases the complexity of an application, which might not really be worth it in a lot of cases - one of the best features of Spring Boot is the simplicity of the application context (all beans are created equal). So this remains an area of active research.
+
+== Functional Bean Definitions
+
+Functional bean registration is a feature added to Spring 5.0, in the form of a few new methods in `BeanDefinitionBuilder` and some convenience methods in `GenericApplicationContext`. It allows for completely non-reflective creation of components by Spring, by attaching a `Supplier` to a `BeanDefinition`, instead of a `Class`.
+
+The programming model is a little bit different than the most popular `@Configuration` style, but it still has the same goal: to extract configuration logic into separate resources, and allow the logic to be implemented in Java. If you had a configuration class like this:
+
+```java
+@Configuration
+public class SampleConfiguration {
+    
+    @Bean
+    public Foo foo() {
+        return new Foo();
+    }
+
+    @Bean
+    public Bar bar(Foo foo) {
+        return new Bar(foo);
+    }
+
+}
+```
+
+You could convert it to functional style like this:
+
+```java
+public class SampleConfiguration
+        implements ApplicationContextInitializer<GenericApplicationContext> {
+
+    public Foo foo() {
+        return new Foo();
+    }
+
+    public Bar bar(Foo foo) {
+        return new Bar(foo);
+    }
+
+    @Override
+    public void initialize(GenericApplicationContext context) {
+        context.registerBean(SampleConfiguration.class, () -> this);
+        context.registerBean(Foo.class,
+                () -> context.getBean(SampleConfiguration.class).foo());
+        context.registerBean(Bar.class, () -> context.getBean(SampleConfiguration.class)
+                .bar(context.getBean(Foo.class)));
+    }
+
+}
+```
+
+There are multiple options for where to make these `registerBean()` method calls, but here we have chosen to show them wrapped in an `ApplicationContextInitializer`. The `ApplicationContextInitializer` is a core framework interface, but it has a special place in Spring Boot because a `SpringApplication` can be loaded up with initializers through its public API, or by declaring them in `META-INF/spring.factories`. The `spring.factories` approach is one that easily allows the application and its integration tests (using `@SpringBootTest`) to share the same configuration.
+
+This programming model is not yet mainstream in Spring Boot applications, but it has been implemented in https://spring.io/blog/2018/10/22/functional-bean-registrations-in-spring-cloud-function[Spring Cloud Function] and is also a basic building block in https://spring.io/blog/2018/10/02/the-evolution-of-spring-fu[Spring Fu]. Also the fastest full Spring Boot benchmark apps above ("bunc") are implemented this way. The main reason for this is that functional bean registration is the fastest way for Spring to create bean instances - it requires virtually no computation beyond instantiating a class and calling its constructors natively.
+
+NOTE: The other, non-functional types of `BeanDefinition` will always be slower, but that will not stop us from optimizing further and the gap will almost certainly narrow as Spring evolves.
+
+The existing functional bean implementations in libraries and apps had to manually copy quite a bit of code from Spring Boot, and convert it to the functional style. For small applications this might be practical, but the more features from Spring Boot you use, the less convenient it will be. Recognizing this we have started work on various tools that could be used to automatically convert `@Configuration` to `ApplicationContextInitializer` code. You can do it at runtime with reflection, and this turns out to be https://github.com/dsyer/spring-boot-auto-reflect[surprisingly fast] (proving that not all reflection is bad), or you could do it at compile time, which promises to be optimal in turns of start up time but is technically a little bit harder to implement.
+
+== The Future
+
+Whatever the future brings, I think we can be certain that Spring will stay as lightweight as possible, and continue to improve performance, in terms of startup time, memory usage and also runtime CPU usage. The most promising lines of attack at present are the functional bean registrations, and probably some automated way to generate those from `@Configuration`, plus the work we are doing with the Graal team at Oracle to make GraalVM more generally usable for Spring Boot applications. There are still optimizations to be made in the core framework, as well as in Spring Boot probably. Keep an eye out on the https://spring.io/blog[Spring Blog] for more new research and new releases, and more topical analysis of performance hotspots and tweaks you can make to avoid them.
