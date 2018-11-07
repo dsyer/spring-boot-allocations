@@ -327,7 +327,9 @@ As with the Maven build, if you have authenticated with `docker` on the command 
 
 == Continuous Integration
 
-Sometimes it is better to leave container creation to an automation layer, in which case the user's code might not need to be polluted in any way. Container creation is tricky, and developers sometimes don't really care about it. If the user code is cleaner there is more chance that a lower layer can "do the right thing", applying security fixes, optimizing caches etc. There are multiple options for automation and they will all come with some features related to containers these days. We are just going to look at a couple.
+Automation is part of every application lifecycle these days (or should be). The tools that people use to do the automation tend to be quite good at just invoking the build system from the source code. So if that gets you a docker image, and the environment in the build agents is sufficiently aligned with developer's own environment, that might be good enough. Authenticating to the docker registry is likely to be the biggest challenge, but there are features in all the automation tools to help with that.
+
+However, sometimes it is better to leave container creation completely to an automation layer, in which case the user's code might not need to be polluted. Container creation is tricky, and developers sometimes don't really care about it. If the user code is cleaner there is more chance that a different tool can "do the right thing", applying security fixes, optimizing caches etc. There are multiple options for automation and they will all come with some features related to containers these days. We are just going to look at a couple.
 
 === Concourse
 
