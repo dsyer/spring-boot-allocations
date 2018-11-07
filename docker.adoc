@@ -12,7 +12,7 @@ NOTE: There is also a Getting Started Guide on https://spring.io/guides/gs/sprin
 
 == A Basic Dockerfile
 
-A Spring Boot application is easy to convert into an executable JAR file. All the Getting Started Guides do this, and every app that you download from https://start.spring.io[Spring Initializr] will have a build step to create an executable JAR. With Maven you `./mvnw install` and with Gradle you `./gradlew build`. A basic Dockerfile to run that JAR would then look like this, at the top level of your project:
+A Spring Boot application is easy to convert into an executable JAR file. All the https://spring.io/guides[Getting Started Guides] do this, and every app that you download from https://start.spring.io[Spring Initializr] will have a build step to create an executable JAR. With Maven you `./mvnw install` and with Gradle you `./gradlew build`. A basic Dockerfile to run that JAR would then look like this, at the top level of your project:
 
 `Dockerfile`
 [source]
@@ -83,11 +83,11 @@ bin      etc      lib      mnt      root     sbin     sys      usr
 / #
 ```
 
-The docker configuration is very simple so far, but the generated image is not very efficient. The docker image has a single filesystem layer with the fat jar in it, and every change we make to the application code changes that layer, which might be 10MB or more (even as much as 50MB for some apps). We can improve on that by splitting the JAR up into multiple layers.
+The docker configuration is very simple so far, and the generated image is not very efficient. The docker image has a single filesystem layer with the fat jar in it, and every change we make to the application code changes that layer, which might be 10MB or more (even as much as 50MB for some apps). We can improve on that by splitting the JAR up into multiple layers.
 
 == A Better Dockerfile
 
-A Spring Boot fat jar naturally has layers because of the way that the jar itself is packaged. If we unpack it first it will already be divided into external and internal dependencies. To do this in one step in the docker build, we need to unpack the jar first. For example (sticking with Maven, but the Gradle version is pretty similar):
+A Spring Boot fat jar naturally has "layers" because of the way that the jar itself is packaged. If we unpack it first it will already be divided into external and internal dependencies. To do this in one step in the docker build, we need to unpack the jar first. For example (sticking with Maven, but the Gradle version is pretty similar):
 
 ```
 $ mkdir target/dependency
@@ -109,7 +109,7 @@ COPY ${DEPENDENCY}/BOOT-INF/classes /app
 ENTRYPOINT ["java","-cp","app:app/lib/*","hello.Application"]
 ----
 
-There are now 3 layers, with all the application resources in the later 2 layers. If the application dependencies don't change, then the first layer (from `BOOT-INF/lib`) will not change, so the build will be faster, and so will the startup of the container at runtime.
+There are now 3 layers, with all the application resources in the later 2 layers. If the application dependencies don't change, then the first layer (from `BOOT-INF/lib`) will not change, so the build will be faster, and so will the startup of the container at runtime as long as the base layers are already cached.
 
 NOTE: We used a hard-coded main application class `hello.Application`. This will probably be different for your application. You could parameterize it with another `ARG` if you wanted. You could also copy the Spring Boot fat `JarLauncher` into the image and use it to run the app - it would work and you wouldn't need to specify the main class, but it would be a bit slower on startup.
 
@@ -117,8 +117,8 @@ NOTE: We used a hard-coded main application class `hello.Application`. This will
 
 If you want to start your app as quickly as possible (most people do) there are some tweaks you might consider. Here are some ideas:
 
-* Use the `spring-context-indexer`. It's not going to add much, but every little helps.
-* Don't use actuators if you can afford not to.
+* Use the `spring-context-indexer` (https://docs.spring.io/spring/docs/current/spring-framework-reference/core.html#beans-scanning-index[link to docs]). It's not going to add much for small apps, but every little helps.
+* Don't use https://docs.spring.io/spring-boot/docs/current-SNAPSHOT/reference/htmlsingle/#production-ready[actuators] if you can afford not to.
 * Use Spring Boot 2.1 and Spring 5.1.
 * Fix the location of the
 https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-application-property-files[Spring Boot config file(s)]
@@ -189,10 +189,10 @@ $ mvn com.spotify:dockerfile-maven-plugin:build
 [INFO] ------------------------------------------------------------------------
 ```
 
-That builds us an anonymous docker image. We can tag it with `docker` on the command line now, or use Maven configuration to set it as the `repository`. Example (without changing the `pom.xml`):
+That builds an anonymous docker image. We can tag it with `docker` on the command line now, or use Maven configuration to set it as the `repository`. Example (without changing the `pom.xml`):
 
 ```
-$ mvn com.spotify:dockerfile-maven-plugin:build -Ddocrfile.repository=myorg/myapp
+$ mvn com.spotify:dockerfile-maven-plugin:build -Ddockerfile.repository=myorg/myapp
 ```
 
 Or in the `pom.xml`:
@@ -233,20 +233,14 @@ buildscript {
 }
 ----
 
-then you need to define a `group` property (which becomes the repository root in the docker image tag):
-
-`build.gradle`
-[source,groovy]
-----
-group = 'myorg'
-----
-
 and then finally you apply the plugin and call its task:
 
 `build.gradle`
 [source,groovy]
 ----
 apply plugin: 'com.palantir.docker'
+
+group = 'myorg'
 
 bootJar {
     baseName = 'myapp'
@@ -269,7 +263,7 @@ In this example we have chosen to unpack the Spring Boot fat jar in a specific l
 
 === Jib Maven and Gradle Plugins
 
-Google has an open source tool called https://github.com/GoogleContainerTools/jib[Jib] that is relatively new, but quite interesting for a number of reasons. Probably the most interesting thing is that you don't need docker to run it - it builds the image using the same standard output as you get from `docker build` but doesn't use `docker` - so it works in environments where docker is not installed (not uncommon in build servers). You also don't need a `Dockerfile` (it would be ignored anyway), or anything in your `pom.xml` to get an image built in Maven (Gradle would require you to at least install the plugin in `build.gradle`).
+Google has an open source tool called https://github.com/GoogleContainerTools/jib[Jib] that is relatively new, but quite interesting for a number of reasons. Probably the most interesting thing is that you don't need docker to run it - it builds the image using the same standard output as you get from `docker build` but doesn't use `docker` unless you ask it to - so it works in environments where docker is not installed (not uncommon in build servers). You also don't need a `Dockerfile` (it would be ignored anyway), or anything in your `pom.xml` to get an image built in Maven (Gradle would require you to at least install the plugin in `build.gradle`).
 
 Another interesting feature of Jib is that it is opinionated about layers, and it optimizes them in a slightly different way than the multi-layer `Dockerfile` created above. Just like in the fat jar, Jib separates local application resources from dependencies, but it goes a step further and also puts snapshot dependencies into a separate layer, since they are more likely to change. There are configuration options for customizing the layout further.
 
@@ -382,8 +376,7 @@ $ docker run -p 8080:8080 myorg/myapp
 ...
 ```
 
-The `--builder` is a docker image that runs the buildpack lifecycle - typically it would be a shared resource for all developers, or all developers on a single platform. This one is work in progress from Ben Hale, who maintains the older buildpacks for Cloud Foundry and is now working on the new generation. The output in this case went to the local docker daemon, but in an automation platform it could be a docker registry.
-
+The `--builder` is a docker image that runs the buildpack lifecycle - typically it would be a shared resource for all developers, or all developers on a single platform. This one is work in progress from Ben Hale, who maintains the older buildpacks for Cloud Foundry and is now working on the new generation. The output in this case went to the local docker daemon, but in an automation platform it could be a docker registry. Once the `pack` CLI reaches a stable release the default builder will probably do the same thing.
 
 == Knative
 
