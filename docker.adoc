@@ -370,22 +370,10 @@ https://jenkins.io[Jenkins] is another popular automation server. It has a huge 
 `Jenkinsfile`
 [source]
 ----
-pipeline {
-    agent {
-        docker {
-            image 'openjdk:8-jdk-alpine' 
-            args '-v /root/.m2:/root/.m2' 
-        }
-    }
-    stages {
-        stage('Build') { 
-            node {
-                 checkout scm
-                 sh './mvnw -B -DskipTests clean package' 
-                 docker.build("myorg/myapp").push()
-             }
-        }
-    }
+node {
+    checkout scm
+    sh './mvnw -B -DskipTests clean package' 
+    docker.build("myorg/myapp").push()
 }
 ----
 
