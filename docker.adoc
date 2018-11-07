@@ -73,6 +73,16 @@ Nov 06, 2018 2:45:16 PM org.springframework.boot.SpringApplication logStartupPro
 
 Notice that the base image is `openjdk:8-jdk-alpine`. The `alpine` images are smaller than the standard `openjdk` library images from https://hub.docker.com/_/openjdk/[Dockerhub]. There is no official alpine image for Java 11 yet (AdoptOpenJDK had one for a while but it no longer appears on their https://hub.docker.com/r/adoptopenjdk/openjdk11/[Dockerhub page]).
 
+If you want to poke around inside the image you can open a shell in it like this (the base image does not have `bash`):
+
+```
+$ docker run -ti --entrypoint /bin/sh myorg/myapp
+/ # ls
+app.jar  dev      home     media    proc     run      srv      tmp      var
+bin      etc      lib      mnt      root     sbin     sys      usr
+/ #
+```
+
 The docker configuration is very simple so far, but the generated image is not very efficient. The docker image has a single filesystem layer with the fat jar in it, and every change we make to the application code changes that layer, which might be 10MB or more (even as much as 50MB for some apps). We can improve on that by splitting the JAR up into multiple layers.
 
 == A Better Dockerfile
@@ -116,7 +126,7 @@ with `spring.config.location` (command line argument or System property etc.).
 * Switch off JMX - you probably don't need it in a container - with `spring.jmx.enabled=false`
 * Run the JVM with `-noverify`. Also consider `-XX:TieredStopAtLevel=1`
 (that will slow down the JIT later at the expense of the saved startup time).
-* Use the container memory hints for Java 8: `-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap`. With Java 11 this is automatic.
+* Use the container memory hints for Java 8: `-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap`. With Java 11 this is automatic by default.
 
 Your app might not need a full CPU at runtime, but it will need multiple CPUs to start up as quickly as possible (at least 2, 4 are better). If you don't mind a slower startup you could throttle the CPUs down below 4.
 
@@ -329,6 +339,55 @@ As with the Maven build, if you have authenticated with `docker` on the command 
 
 == Buildpacks
 
+https://www.cloudfoundry.org/[Cloud Foundry] has used containers internally for many years now, and part of the technology used to transform user code into containers is Build Packs, an idea originally borrowed from https://www.heroku.com/[Heroku]. The current generation of buildpacks (v2) generates generic binary output that is assembled into a container by the platform. The https://buildpacks.io/[new generation of buildpacks] (v3) is a collaboration between Heroku and other companies including Pivotal, and it builds container images directly and explicitly. This is very interesting for developers and operators. Developers don't need to care so much about the details of how to build a container, but they can easily create one if they need to. Buildpacks also have lots of features for caching build results and dependencies, so often a buildpack will run much quicker than a native docker build.  Operators can scan the containers to audit their contents and transform them to patch them for security updates. And you can run the buildpacks locally (e.g. on a developer machine, or in a CI service), or in a platform like Cloud Foundry.
+
+The output from a buildpack lifecycle is a container image, but you don't need docker or a `Dockerfile`, so it's CI and automation friendly. The filesystem layers in the output image are controlled by the buildpack, and typically many optimizations will be made without the developer having to know or care about them. There is also an https://en.wikipedia.org/wiki/Application_binary_interface[Application Binary Interface] between the lower level layers, like the base image containing the operating system, and the upper layers, containing middleware and language specific dependencies. This makes it possible for a platform, like Cloud Foundry, to patch lower layers if there are security updates without affecting the integrity and functionality of the application.
+
+To give you an idea of the features of a buildpack here is an example using the https://github.com/buildpack/pack[Pack CLI] from the command line (it would work with the sample app we have been using in thus article, no need for a `Dockerfile` or any special build configuration):
+
+```
+$ pack build myorg/myapp --builder=nebhale/java-build --path=.
+2018/11/07 09:54:48 Pulling builder image 'nebhale/java-build' (use --no-pull flag to skip this step)
+2018/11/07 09:54:49 Selected run image 'packs/run' from stack 'io.buildpacks.stacks.bionic'
+2018/11/07 09:54:49 Pulling run image 'packs/run' (use --no-pull flag to skip this step)
+*** DETECTING:
+2018/11/07 09:54:52 Group: Cloud Foundry OpenJDK Buildpack: pass | Cloud Foundry Build System Buildpack: pass | Cloud Foundry JVM Application Buildpack: pass
+*** ANALYZING: Reading information from previous image for possible re-use
+*** BUILDING:
+-----> Cloud Foundry OpenJDK Buildpack 1.0.0-BUILD-SNAPSHOT
+-----> OpenJDK JDK 1.8.192: Reusing cached dependency
+-----> OpenJDK JRE 1.8.192: Reusing cached launch layer
+
+-----> Cloud Foundry Build System Buildpack 1.0.0-BUILD-SNAPSHOT
+-----> Using Maven wrapper
+       Linking Maven Cache to /home/pack/.m2
+-----> Building application
+       Running /workspace/app/mvnw -Dmaven.test.skip=true package
+...
+---> Running in e6c4a94240c2
+---> 4f3a96a4f38c
+---> 4f3a96a4f38c
+Successfully built 4f3a96a4f38c
+Successfully tagged myorg/myapp:latest
+$ docker run -p 8080:8080 myorg/myapp
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::        (v2.0.5.RELEASE)
+
+2018-11-07 09:41:06.390  INFO 1 --- [           main] hello.Application                        : Starting Application on 1989fb9a00a4 with PID 1 (/workspace/app/BOOT-INF/classes started by pack in /workspace/app)
+...
+```
+
+The `--builder` is a docker image that runs the buildpack lifecycle - typically it would be a shared resource for all developers, or all developers on a single platform. This one is work in progress from Ben Hale, who maintains the older buildpacks for Cloud Foundry and is now working on the new generation. The output in this case went to the local docker daemon, but in an automation platform it could be a docker registry.
+
+
+== Knative
+
+Another new project in the container and platform space is https://cloud.google.com/knative/[Knative]. Knative is a lot of things, but if you are not familiar with it you can think of it as a building block for building a serverless platform. It is built on https://kubernetes.io[Kubernetes] so ultimately it consumes container images, and turns them into applications or "services" on the platform. One of the main features it has, though, is the ability to consume source code and build the container for you, making it more developer and operator friendly. https://github.com/knative/build[Knative Build] is the component that does this and is itself a flexible platform for transforming user code into containers - you can do it in pretty much any way you like. Some templates are provided with common patterns like Maven and Gradle builds, and multi-stage docker builds using https://github.com/GoogleContainerTools/kaniko[Kaniko]. There is also a template that use https://github.com/knative/build-templates/tree/master/buildpack[Buildpacks] which is very interesting for us, since buildpacks have always had good support for Spring Boot. Buildpacks on Knative are also the opinionated choice of https://projectriff.io[Riff] and https://pivotal.io/platform/pivotal-function-service[Pivotal Function Service] for transforming user functions into running serverless apps.
 
 // https://dzone.com/articles/deploying-spring-boot-on-docker
 // https://dzone.com/articles/creating-dual-layer-docker-images-for-spring-boot
