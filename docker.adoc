@@ -327,9 +327,69 @@ As with the Maven build, if you have authenticated with `docker` on the command 
 
 == Continuous Integration
 
+Sometimes it is better to leave container creation to an automation layer, in which case the user's code might not need to be polluted in any way. Container creation is tricky, and developers sometimes don't really care about it. If the user code is cleaner there is more chance that a lower layer can "do the right thing", applying security fixes, optimizing caches etc. There are multiple options for automation and they will all come with some features related to containers these days. We are just going to look at a couple.
+
 === Concourse
 
+https://concourse-ci.org[Concourse] is a pipeline-based automation platform that can be used for CI and CD. It is heavily used inside Pivotal and the main authors of the project work there. Everything in Concourse is stateless and everything runs in a container, except the CLI. Since running containers is the main order of business for the automation pipelines, creating containers is well supported. The https://github.com/concourse/docker-image-resource[Docker Image Resource] is responsible for keeping the output state of your build up to date, if it is a container image.
+
+Here's an example pipeline that builds a docker image for the sample above, assuming it is in github at `myorg/myapp` and has a `Dockerfile` at the root and a build task declaration in `src/main/ci/build.yml`:
+
+```
+resources:
+- name: myapp
+  type: git
+  source:
+    uri: https://github.com/myorg/myapp.git
+- name: myapp-image
+  type: docker-image
+  source:
+    email: {{docker-hub-email}}
+    username: {{docker-hub-username}}
+    password: {{docker-hub-password}}
+    repository: myorg/myapp
+
+jobs:
+- name: main
+  plan:
+  - task: build
+    file: myapp/src/main/ci/build.yml
+  - put: myapp-image
+    params:
+      build: myapp
+```
+
+The structure of a pipeline is very declarative: you define "resources" (which are either input or output or both), and "jobs" (which use and apply actions to resources). If any of the input resources changes a new build is triggered. If any of the output resources changes during a job, then it is updated.
+
+The pipeline could be defined in a different place than the application source code. And for a generic build setup the task declarations could be centralized or externalized as well. This allows some separation of concerns between development and automation, if that's the way you roll.
+
 === Jenkins
+
+https://jenkins.io[Jenkins] is another popular automation server. It has a huge range of features, but one that is the closest to the other automation samples here is the https://jenkins.io/doc/book/pipeline/docker/[pipeline] feature. Here's a `Jenkinsfile` that builds a Spring Boot project with Maven and then uses a `Dockerfile` to build an image and push it to a repository:
+
+`Jenkinsfile`
+[source]
+----
+pipeline {
+    agent {
+        docker {
+            image 'openjdk:8-jdk-alpine' 
+            args '-v /root/.m2:/root/.m2' 
+        }
+    }
+    stages {
+        stage('Build') { 
+            node {
+                 checkout scm
+                 sh './mvnw -B -DskipTests clean package' 
+                 docker.build("myorg/myapp").push()
+             }
+        }
+    }
+}
+----
+
+For a (realistic) docker repository that needs authentication in the build server, you can add credentials to the `docker` object above using `docker.withCredentials(...)`.
 
 == Buildpacks
 
