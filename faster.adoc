@@ -6,15 +6,16 @@ image::https://docs.google.com/spreadsheets/d/e/2PACX-1vQpSEfx0Y1W9aD3XVyn91-S0j
 
 As you squeeze the available heap, and application generally isn't affected on startup, until it reaches a critical point. The characteristic "hockey stick" shape of the graphs shows the point at which garbage collection loses the fight and the app no longer starts up at all. We see from the graphs that it is quite possible to run a simple Netty app in 10MB heap with Spring Boot 2.1 (but not with 2.0). It is also a bit faster in 2.1 compared to 2.0.
 
-Most of the detail here refers specifically to measurements and optimizations for startup time, but heap memory consumption is also something that is very relevant because constraints on heap size generally lead to slower startup (see the graph above). There are other aspects of performance that we could (and will) focus on, particularly where annotations are being used for HTTP request mapping, for example; but those concerns will have to wait for another, separate write up.
+Most of the detail here refers specifically to measurements and optimizations for startup time, but heap memory consumption is also something that is very relevant because constraints on heap size can lead to slower startup (see the graph above). There are other aspects of performance that we could (and will) focus on, particularly where annotations are being used for HTTP request mapping, for example; but those concerns will have to wait for another, separate write up.
 
 When all things are considered, remember that Spring was designed _ab initio_ to be lightweight, and actually does very little work unless you ask it to. There are many *optional* features, so you don't have to use them. Here are some quick summary points:
 
 * Packaging: an exploded jar with the application's own main is always faster
 * Server: there is no measureable difference between Tomcat, Jetty and Undertow
 * Netty is a _bit_ faster on startup - you won't notice in a large app
-* The more features you use, the more classes are loaded
+* The more features you use, the more classes are loaded, and class loading is takes about 80% of startup time
 * Functional bean definitions rule
+* If you can't use functional beans then manually choosing a set of Spring Boot autoconfigurations is usually faster than `@EnableAutoConfiguration`
 * A minimal Spring Boot app with an HTTP endpoint starts in <1sec and uses <10MB heap
 
 Some links:
@@ -52,7 +53,9 @@ in https://github.com/dsyer/spring-boot-allocations[this project] you can copy.
 * Run the JVM with `-noverify`. Also consider `-XX:TieredStopAtLevel=1`
 (that will slow down the JIT later at the expense of the saved startup time).
 
-A more extreme choice is to re-write all your application configuration using functional bean definitions. This includes all the Spring Boot autoconfiguration you are using, most of which can be re-used, but it's stll manual work to identify which classes to use and register all the bean definitions. If you try this approach you might see a 2x improvement in startup time. Look at the `BuncApplication` in the https://github.com/dsyer/spring-boot-micro-apps[micro apps] to see how to start Spring Boot without the `@Configuration` class processor.
+A more extreme approach is to choose all the `@Configuration` classes manually, instead of using `@EnableAutoConfiguration`. This is fiddly and error prone, and you lose some of the benefits of autoconfiguration, but once done should be stable for any given codebase. The main benefit of this approach is really leaving out beans that you are not using. It is a fallacy to assume that autoconfiguration is slower because it "scans the classpath". The candidate autoconfiguration classes are selected very quickly without loading any of the classes, so this aspect is covered very efficiently and has been optimized extremely aggressively. But you might find that the default autoconfiguration settings choose things that you don't end up using. 
+
+The most extreme choice is to re-write all your application configuration using functional bean definitions. This includes all the Spring Boot autoconfiguration you are using, most of which can be re-used, but it's stll manual work to identify which classes to use and register all the bean definitions. If you try this approach you might see a 2x improvement in startup time. Look at the `BuncApplication` in the https://github.com/dsyer/spring-boot-micro-apps[micro apps] to see how to start Spring Boot without the `@Configuration` class processor.
 
 Excluding `netty-transport-native-epoll` also boosts the startup time by 30ms or so (Linux only). This is a regression since Spring Boot 2.0, so once we understand it a bit better we can probably eliminate it.
 
@@ -97,8 +100,8 @@ Here's an example flame graph from the HTTP sample app we have been benchmarking
 
 [cols="52a,48a"]
 |===
-|image::images/flame_20.svg[flame_20]
-|image::images/flame_21.svg[flame_21]
+|image::https://github.com/dsyer/spring-boot-allocations/raw/master/images/flame_20.svg?sanitize=true[flame_20]
+|image::https://github.com/dsyer/spring-boot-allocations/raw/master/images/flame_21.svg?sanitize=trueimages/flame_21.svg[flame_21]
 
 | Spring Boot 2.0
 | Spring Boot 2.1
@@ -209,6 +212,58 @@ To do this you would need to be able to precisely identify a subsystem in your s
 ```
 
 To make this kind of pattern more mainstream would probably take some changes in the core Spring programming model, to allow the subsystems to be identified and dealt with in special ways at runtime. It also increases the complexity of an application, which might not really be worth it in a lot of cases - one of the best features of Spring Boot is the simplicity of the application context (all beans are created equal). So this remains an area of active research.
+
+== Manual Configuration
+
+As mentioned already, it can be beneficial, if a little fiddly, to manually select the `@Configuration` classes instead of relying on `@EnableAutoConfiguration`. For example, in a simple web application the most discardable autoconfigurations are
+
+* `TaskExecutionAutoConfiguration` and `TaskSchedulingAutoConfiguration` for background execution with `@Scheduled` and `@Async`.
+* `JmxAutoConfiguration` configures a lot of useful JMX instrumentation, but if you aren't going to use it, it's a waste.
+* `RestTemplateAutoConfiguration` and `WebClientAutoConfiguration`, both of which are on by default but you probably only use at most one of them.
+
+Here's a minimal Spring Boot application with Netty and one endpoint, and selecting all configuration classes manually:
+
+```java
+@SpringBootConfiguration
+@Import({ PropertyPlaceholderAutoConfiguration.class,
+          ConfigurationPropertiesAutoConfiguration.class,
+		  ReactiveWebServerFactoryAutoConfiguration.class,
+          WebFluxAutoConfiguration.class,
+		  ErrorWebFluxAutoConfiguration.class,
+          HttpHandlerAutoConfiguration.class })
+public class SampleApplication {
+
+	@Bean
+	public RouterFunction<?> userEndpoints() {
+		return route(GET("/"), request -> ok().body(Mono.just("Hello"), String.class));
+	}
+
+	public static void main(String[] args) {
+		SpringApplication.run(SampleApplication.class, args);
+	}
+}
+```
+
+It will start in well under a second and in less than 10MB heap. The same app with `@SpringBootApplication` (including all autconfiguration) will start approximately 20% slower. Here are some benchmarks:
+
+|===
+|Style  |Beans |Classes |Startup(ms)
+
+|auto   |89    |4363    |850
+
+|lazy   |90    |4053    |777
+
+|manual |51    |3788    |670
+
+|func   |48    |3647    |626
+|===
+
+Key:
+
+* "auto": fully leaded `@SpringBootApplication`
+* "lazy": all bean definitions are lazy by default
+* "manual": manually selected autoconfigurations
+* "func": the same but converted to functional bean definitions
 
 == Functional Bean Definitions
 
