@@ -47,7 +47,8 @@ Example for testing in IDE:
 `spring.config.location=file://./src/main/resources/application.properties`.
 * Switch off JMX if you don't need it with `spring.jmx.enabled=false`
 * Make bean definitions lazy by default. There's nothing in Spring
-Boot that does this, but there's a `LazyInitBeanFactoryPostProcessor`
+Boot that does this generally, but you can set `spring.data.jpa.repositories.bootstrap-mode`
+to defer the Spring Data initialization. There is also a `LazyInitBeanFactoryPostProcessor`
 in https://github.com/dsyer/spring-boot-allocations[this project] you can copy.
 * Unpack the fat jar and run with an explicit classpath.
 * Run the JVM with `-noverify`. Also consider `-XX:TieredStopAtLevel=1`
@@ -157,7 +158,7 @@ Your mileage my vary, but consider excluding:
 * Use explicit `spring.config.location`. Spring Boot looks in quite a lot of locations for `application.properties` (or `.yml`), so if you know exactly where it is, or might be at runtime, you can shave off a few percent.
 * Switch off JMX: `spring.jmx.enabled=false`. If you aren't using it you don't need to pay the cost of creating and registering the MBeans.
 * Make bean definitions lazy by default. There's nothing in Spring Boot that does this, but there's a `LazyInitBeanFactoryPostProcessor` in https://github.com/dsyer/spring-boot-allocations[this project] you can copy. It is just a `BeanFactoryPostProcessor` that switches all beans to `lazy=true`.
-* Spring Data has some lazy initialization features now (in Lovelace, or Spring Boot 2.1). In Spring Boot you can just set `spring.data.jpa.repositories.bootstrap-mode=lazy` - for large apps with 100s of entities improves startup time by more than a factor of 10.
+* Spring Data has some lazy initialization features now (in Lovelace, or Spring Boot 2.1). In Spring Boot you can just set `spring.data.jpa.repositories.bootstrap-mode=deferred` (or `lazy` for completely lazy) - for large apps with 100s of entities improves startup time by more than a factor of 10.
 * Use functional bean definitions instead of `@Configuration`. More detail later on this.
 
 == JVM Tweaks
@@ -244,7 +245,7 @@ public class SampleApplication {
 }
 ```
 
-It will start in well under a second and in less than 10MB heap. The same app with `@SpringBootApplication` (including all autconfiguration) will start approximately 20% slower. Here are some benchmarks:
+It will start in well under a second and in less than 10MB heap. The same app with `@SpringBootApplication` (including all autoconfiguration) will start approximately 20% slower. Here are some benchmarks:
 
 |===
 |Style  |Beans |Classes |Startup(ms)
