@@ -30,8 +30,7 @@ import org.springframework.boot.autoconfigure.web.reactive.WebFluxProperties;
 import org.springframework.boot.autoconfigure.web.reactive.WebFluxRegistrations;
 import org.springframework.boot.autoconfigure.web.reactive.error.ErrorWebFluxAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
-import org.springframework.boot.context.properties.ConfigurationBeanFactoryMetadata;
-import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessorRegistrar;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.client.RestTemplateCustomizer;
 import org.springframework.boot.web.codec.CodecCustomizer;
@@ -176,12 +175,8 @@ public class FuncApplication implements Runnable, Closeable,
 	}
 
 	private void registerConfigurationProperties() {
-		context.registerBean(ConfigurationBeanFactoryMetadata.BEAN_NAME,
-				ConfigurationBeanFactoryMetadata.class,
-				() -> new ConfigurationBeanFactoryMetadata());
-		context.registerBean(ConfigurationPropertiesBindingPostProcessor.BEAN_NAME,
-				ConfigurationPropertiesBindingPostProcessor.class,
-				() -> new ConfigurationPropertiesBindingPostProcessor());
+		new ConfigurationPropertiesBindingPostProcessorRegistrar()
+				.registerBeanDefinitions(null, context);
 		context.registerBean(ServerProperties.class, () -> new ServerProperties());
 		context.registerBean(ResourceProperties.class, () -> new ResourceProperties());
 		context.registerBean(WebFluxProperties.class, () -> new WebFluxProperties());
@@ -215,19 +210,19 @@ public class FuncApplication implements Runnable, Closeable,
 		context.registerBean(ErrorAttributes.class, () -> new DefaultErrorAttributes(
 				context.getBean(ServerProperties.class).getError().isIncludeException()));
 		context.registerBean(ErrorWebExceptionHandler.class, () -> {
-			return errorWebFluxAutoConfiguration()
-					.errorWebExceptionHandler(context.getBean(ErrorAttributes.class));
+			return errorWebFluxAutoConfiguration().errorWebExceptionHandler(
+					context.getBean(ErrorAttributes.class),
+					context.getBean(ResourceProperties.class),
+					context.getDefaultListableBeanFactory()
+							.getBeanProvider(ResolvableType.forClassWithGenerics(
+									List.class, ViewResolver.class)),
+					context.getBean(ServerCodecConfigurer.class), context);
 		});
 	}
 
 	private ErrorWebFluxAutoConfiguration errorWebFluxAutoConfiguration() {
 		ServerProperties serverProperties = context.getBean(ServerProperties.class);
-		ResourceProperties resourceProperties = context.getBean(ResourceProperties.class);
-		ServerCodecConfigurer serverCodecs = context.getBean(ServerCodecConfigurer.class);
-		return new ErrorWebFluxAutoConfiguration(serverProperties, resourceProperties,
-				context.getDefaultListableBeanFactory().getBeanProvider(ResolvableType
-						.forClassWithGenerics(List.class, ViewResolver.class)),
-				serverCodecs, context);
+		return new ErrorWebFluxAutoConfiguration(serverProperties);
 	}
 
 	private void registerWebFluxAutoConfiguration() {
@@ -322,10 +317,9 @@ public class FuncApplication implements Runnable, Closeable,
 
 	private void registerHttpMessageConvertersAutoConfiguration() {
 		context.registerBean(HttpMessageConverters.class, () -> {
-			HttpMessageConvertersAutoConfiguration config = new HttpMessageConvertersAutoConfiguration(
-					context.getBeanProvider(ResolvableType.forClassWithGenerics(
-							List.class, HttpMessageConverter.class)));
-			return config.messageConverters();
+			HttpMessageConvertersAutoConfiguration config = new HttpMessageConvertersAutoConfiguration();
+			return config.messageConverters(context.getBeanProvider(ResolvableType
+					.forClassWithGenerics(List.class, HttpMessageConverter.class)));
 		});
 		context.registerBean(StringHttpMessageConverter.class,
 				this::stringHttpMessageConverter);
@@ -346,13 +340,14 @@ public class FuncApplication implements Runnable, Closeable,
 	}
 
 	private void registerRestTemplateAutoConfiguration() {
-		RestTemplateAutoConfiguration config = new RestTemplateAutoConfiguration(
-				context.getDefaultListableBeanFactory()
-						.getBeanProvider(HttpMessageConverters.class),
-				context.getDefaultListableBeanFactory().getBeanProvider(ResolvableType
-						.forClassWithGenerics(List.class, RestTemplateCustomizer.class)));
+		RestTemplateAutoConfiguration config = new RestTemplateAutoConfiguration();
 		context.registerBean(RestTemplateBuilder.class,
-				() -> config.restTemplateBuilder());
+				() -> config.restTemplateBuilder(
+						context.getDefaultListableBeanFactory()
+								.getBeanProvider(HttpMessageConverters.class),
+						context.getDefaultListableBeanFactory().getBeanProvider(
+								ResolvableType.forClassWithGenerics(List.class,
+										RestTemplateCustomizer.class))));
 	}
 
 	private void registerWebClientAutoConfiguration() {

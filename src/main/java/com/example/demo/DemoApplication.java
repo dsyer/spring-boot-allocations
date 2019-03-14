@@ -16,7 +16,6 @@ import static org.springframework.web.reactive.function.server.ServerResponse.ok
 import reactor.core.publisher.Mono;
 
 @SpringBootApplication
-// @Import(LazyInitBeanFactoryPostProcessor.class)
 public class DemoApplication implements Runnable, Closeable {
 
 	private ConfigurableApplicationContext context;

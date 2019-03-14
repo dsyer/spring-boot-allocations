@@ -16,8 +16,8 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>1.8</java.version>
 		<jmh.version>1.16</jmh.version>
-		<spring-boot.version>2.1.0.BUILD-SNAPSHOT</spring-boot.version>
-		<spring-cloud.version>Greenwich.BUILD-SNAPSHOT</spring-cloud.version>
+		<spring-boot.version>2.2.0.BUILD-SNAPSHOT</spring-boot.version>
+		<spring-cloud.version>Hoxton.BUILD-SNAPSHOT</spring-cloud.version>
 		<locator.version>1.0.0.RELEASE</locator.version>
 		<thin.version>1.0.17.RELEASE</thin.version>
 		<uberjar.name>benchmarks</uberjar.name>
@@ -83,6 +83,10 @@
 				<exclusion>
 					<groupId>io.netty</groupId>
 					<artifactId>netty-transport-native-epoll</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>jakarta.validation</groupId>
+					<artifactId>jakarta.validation-api</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
