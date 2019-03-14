@@ -221,8 +221,12 @@ Download the https://github.com/jvm-profiling-tools/async-profiler[profiler] and
 -agentpath:<path-to>/async-profiler/build/libasyncProfiler.so=start,svg,file=/tmp/flame.svg,event=cpu,interval=100000 -Ddemo.close=true -Xmx128m -noverify -XX:TieredStopAtLevel=1
 ```
 
-> HINT: you can click on the flames to zoom in on the stack above
+> HINT: You can click on the flames to zoom in on the stack above
 > where you click.
+
+> HINT: You might also need `framebuf=10000000` (or similar) if you
+bust the buffer limit in the flame graph generation (shows up as a big
+red flat flame).
 
 [cols="50a,50a"]
 |===
@@ -375,6 +379,7 @@ MainBenchmark.demo        ss   10  1.156 ± 0.203   s/op
 MainBenchmark.boot        ss   10  1.115 ± 0.210   s/op
 MainBenchmark.manual      ss   10  1.068 ± 0.185   s/op
 MainBenchmark.auto        ss   10  0.778 ± 0.202   s/op
+MainBenchmark.cunc        ss   10  0.720 ± 0.127   s/op
 MainBenchmark.bunc        ss   10  0.683 ± 0.147   s/op
 MainBenchmark.func        ss   10  0.573 ± 0.149   s/op
 MainBenchmark.shared      ss   10  0.219 ± 0.070   s/op
@@ -389,14 +394,16 @@ flame graph for this one has much less GC activity.
 * "manual" is the same but gets rid of `SpringApplication`. Another
 50ms improvement.
 
-* "bunc" registers all beans in the application directly, by class or
+* "cunc" registers all beans in the application directly, by class or
 using the functional bean registration API. It uses
-`SpringApplication` (so all of Boot except autoconfig, basically), but
-it switches off the `ConfigurationClassPostProcessor`.
+`SpringApplication` (so all of Boot except autoconfig, basically) and
+`ConfigurationClassPostProcessor` (which has nothing to do but still
+costs 50ms or so).
 
-* "func" creates the application context by hand, forgoing the
-benefits of Spring Boot. Results are pretty good (first sample under
-1000ms).
+* "bunc" is "cunc" but switches off the `ConfigurationClassPostProcessor`.
+
+* "func" is "bunc" but forgoing the benefits of Spring Boot. Results
+are pretty good (first sample under 1000ms).
 
 * "auto" is a hybrid - it uses functional bean registrations generated
 using reflection from existing autoconfiguration. It is fully

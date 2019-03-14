@@ -84,6 +84,12 @@ import static org.springframework.web.reactive.function.server.ServerResponse.ok
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
+/**
+ * Functional bean definitions. No Spring Boot.
+ * 
+ * @author Dave Syer
+ *
+ */
 public class FuncApplication implements Runnable, Closeable,
 		ApplicationContextInitializer<GenericApplicationContext> {
 
