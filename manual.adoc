@@ -1,0 +1,396 @@
+= Manual Bean Definitions in Spring Boot
+
+Suppose you want to use Spring Boot, but you don't want to
+`@EnableAutoConfiguration`. What should you do exactly? In an
+https://spring.io/blog/2018/12/12/how-fast-is-spring[earlier article]
+I showed that Spring is intrinsically fast and lightweight, but one of
+the short pieces of advice improve startup time was to consider
+manually importing the Spring Boot autoconfigurations, instead of
+sucking them all in automatically. It won't be the right thing to do
+for all applications, but it might help, and it certainly won't hurt
+to understand what the options are. In this piece we explore various
+ways of doing manual configuration and assess their impact.
+
+== Full Autoconfiguration: Hello World WebFlux
+
+As a baseline, let's look at a Spring Boot application that has a
+single HTTP endpoint:
+
+```java
+@SpringBootApplication
+@RestController
+public class DemoApplication {
+
+  @GetMapping("/")
+  public Mono<String> home() {
+    return Mono.just("Hello World");
+  }
+
+  public void main(String[] args) {
+    SpringApplication.run(DemoApplication.class, args);
+  }
+
+}
+```
+
+If you run this app with all the tweaks suggested in the earlier
+article it should start in round about a second, or a bit longer
+depending on your hardware. It does a lot in that time - sets up a
+logging system, reads and binds to configuration files, starts Netty
+and listens on port 8080, providing a route to the `@GetMapping` in
+the application, and also provides default error handling. If the
+Spring Boot Actuator is on the classpath, you also get a /health and
+an /info endpoint (and it will take a bit longer to start up because
+of that).
+
+The `@SpringBootApplication` annotation, in case you didn't know, is
+meta-annotated with `@EnableAutoConfiguration` and this is what
+provides all that useful functionality for free. That's what makes
+Spring Boot popular, so we don't want to lose any of it, but we can
+take a closer look at what is actually happening and maybe do some of
+it manually, to see if we learn anything.
+
+NOTE: if you want to try this code out, it's easy to get an empty
+WebFlux app from the https://spring.io[Spring Initializr]. Just select
+the "Reactive Web" checkbox and download the project.
+
+== Manual Imports of Autoconfiguration
+
+While the `@EnableAutoConfiguration` feature makes adding features to
+an application easy, it also takes away some control over which
+features are enabled. Most people are happy to make that compromise -
+the ease of use outweighs the loss of control. Potentially there are
+performance penalties - the application might start a bit slower
+because Spring Boot has to do some work to find all those features and
+install them. In fact there is not a significant amount of effort
+involved in finding the right features: there is no classpath scan,
+and condition evaluation is extremely fast, after careful
+optimization. The bulk (80% or so) of startup time for one of this
+application is taken up by the JVM loading classes, so practically the
+only way to make it start up quicker is to ask it to do less, by
+installing fewer features.
+
+Autoconfiguration can always be disabled using the `exclude` attribute
+in the `@EnableAutoConfiguration` annotation. Some individual
+autoconfigurations also have their own boolean configuration flag that
+can be set externally, e.g. for JMX we could use
+`spring.jmx.enabled=false` (as a System property or in a properties
+file, for example). We could go down that road and manually switch off
+everything we didn't want to use, but that gets a bit clumsy and
+doesn't stop additional things being switched on if the classpath
+changes.
+
+Instead, let's see what we can do using the existing autoconfiguration
+classes but just applying the ones we know we want to use,
+corresponding to the features we like. We could call this the "a la
+carte" approach, as opposed to "all you can eat" that comes with full
+autoconfiguration. Autoconfiguration classes are just regular
+`@Configuration` so in principle we can `@Import` them into an
+application that does not `@EnableAutoConfiguration`.
+
+WARNING: Don't do this without reading the rest of the article. It's
+not the right way to use Spring Boot Autoconfiguration. It might break
+something, but as always your mileage may vary.
+
+For example, here is the application above, with all the features we
+want (excluding actuators):
+
+```java
+@SpringBootConfiguration
+@Import({
+    WebFluxAutoConfiguration.class,
+    ReactiveWebServerFactoryAutoConfiguration.class,
+    ErrorWebFluxAutoConfiguration.class,
+    HttpHandlerAutoConfiguration.class,
+    ConfigurationPropertiesAutoConfiguration.class,
+    PropertyPlaceholderAutoConfiguration.class
+})
+@RestController
+public class DemoApplication {
+
+  @GetMapping("/")
+  public Mono<String> home() {
+    return Mono.just("Hello World");
+  }
+
+  public void main(String[] args) {
+    SpringApplication.run(DemoApplication.class, args);
+  }
+
+}
+```
+
+This version of the application will still have all the features we
+described above, but will start faster (probably by 30% or so). So
+what did we give up to get that faster start up? Here's a quick
+rundown:
+
+* The full features set of Spring Boot autoconfiguration includes
+other stuff that might actually be needed in a real application, as
+opposed to the specific tiny sample. In other words, the 30% speed up
+is not going to be available for all applications, and your mileage
+may vary.
+
+* The manual configuration is brittle, and hard to guess. If you wrote
+another application that did slightly different things, you would need
+a different configuration import. You can mitigate this by extracting
+it into a convenience class or annotation, and re-using it.
+
+* An `@Import` does not behave the same way as
+`@EnableAutoConfiguration` in relation to ordering of configuration
+classes. The order is important within the `@Import` in case some
+classes have conditional behaviour that depend on earlier
+classes. To mitigate you just have to be careful.
+
+* There is another ordering problem in a typical real-world
+application. To mimic the behaviour of `@EnableAutoConfiguration` you
+need the user configurations to be processed first, so that they can
+override the conditional configuration in Spring Boot. If you use
+`@ComponentScan`, you can't control the order of the scan, or the
+order those classes are processed compared to `@Imports`. You can
+mitigate this by using a different annotation (see below).
+
+* The Spring Boot autoconfigurations were actually never designed to
+be used this way, and doing so might introduce subtle bugs in your
+application. The only mitigations for this are exhaustive testing that
+it works the way you expect, and being cautious about upgrades.
+
+=== Adding Actuators
+
+We can also add the actuators if they are on the classpath:
+
+```java
+@SpringBootConfiguration
+@Import({
+    WebFluxAutoConfiguration.class,
+    ReactiveWebServerFactoryAutoConfiguration.class,
+    ErrorWebFluxAutoConfiguration.class,
+    HttpHandlerAutoConfiguration.class,
+    EndpointAutoConfiguration.class,
+    HealthIndicatorAutoConfiguration.class, HealthEndpointAutoConfiguration.class,
+    InfoEndpointAutoConfiguration.class, WebEndpointAutoConfiguration.class,
+    ReactiveManagementContextAutoConfiguration.class,
+    ManagementContextAutoConfiguration.class,
+    ConfigurationPropertiesAutoConfiguration.class,
+    PropertyPlaceholderAutoConfiguration.class
+})
+@RestController
+public class DemoApplication {
+
+  @GetMapping("/")
+  public Mono<String> home() {
+    return Mono.just("Hello World");
+  }
+
+  public void main(String[] args) {
+    SpringApplication.run(DemoApplication.class, args);
+  }
+
+}
+```
+
+This app starts even faster comparative to the full
+`@EndpointAutoConfiguration` application (maybe even 50% faster),
+because we only included the configuration relevant to the two default
+endpoints. Spring Boot activates all endpoints by default but does not
+expose them to HTTP. If we only care about /health and /info that is
+wasteful, but of course it also leaves a lot of really useful features
+on the table.
+
+NOTE: Spring Boot may well do more in the future to disable actuators
+that have not been exposed or have not been used. E.g. see issues on
+https://github.com/spring-projects/spring-boot/issues/7578[lazy
+actuators] and
+https://github.com/spring-projects/spring-boot/issues/15451[conditional
+endpoints] (which is already in Spring Boot 2.1.2).
+
+=== What's the difference?
+
+The manually configured application has 51 beans, while the fully
+leaded autoconfigured application has 107 beans (not counting
+actuators). So it's maybe not a surprise that it starts up a bit
+quicker. Before we move on to a different way to implement the sample
+application, let's take a look at what we have left out in order to
+get it to start up faster. If you list the bean definitions in both
+apps you will see that all the differences come from the
+autoconfigurations that we left out, and which would not have been
+conditionally excluded by Spring Boot. Here's the list (assuming that
+you are using `spring-boot-start-webflux` with no manual exclusions):
+
+```
+AutoConfigurationPackages
+CodecsAutoConfiguration
+JacksonAutoConfiguration
+JmxAutoConfiguration
+ProjectInfoAutoConfiguration
+ReactorCoreAutoConfiguration
+TaskExecutionAutoConfiguration
+TaskSchedulingAutoConfiguration
+ValidationAutoConfiguration
+HttpMessageConvertersAutoConfiguration
+RestTemplateAutoConfiguration
+WebClientAutoConfiguration
+```
+
+So that's 12 autoconfigurations that we didn't need (yet anyway) and
+which led to 56 additional beans in the autoconfigured
+application. They all provide useful features, so we might want to
+include them again one day, but for now let's assume that we are happy
+to live without whatever they are doing.
+
+NOTE: `spring-boot-autoconfigure` has 122 autoconfigurations (there
+are more in `spring-boot-actuator-autoconfigure`), and the fully leaded
+autoconfigured sample application above only used 18 of them. The
+computation of which ones to use takes place very early and most of
+them are discarded by Spring Boot before any classes are even
+loaded. It's very fast (a few milliseconds).
+
+== Spring Boot Autoconfiguration Imports
+
+The ordering issue associated with the difference between user
+configuration (which has to be applied first) and autoconfiguration can
+be addressed partially by using a different annotation. Spring Boot
+provides an annotation for this: `@ImportAutoConfiguration`, which is
+from `spring-boot-autoconfigure` but used in the
+https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-testing-spring-boot-applications-testing-autoconfigured-tests[test
+slices] features that ship with Spring Boot Test. So you can replace
+the `@Import` annotation in the examples above with
+`@ImportAutoConfiguration` and the effect is to defer processing of
+the autoconfigurations until after all the user configurations
+(e.g. picked up via `@ComponentScan` or `@Import`).
+
+We can even go a stage further than that if we are prepared to curate
+the list of autoconfigurations into a custom annotation. Instead of
+just copying them into an explicit `@ImportAutoConfiguration`, we can
+write a custom annotation like this:
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@ImportAutoConfiguration
+public @interface EnableWebFluxAutoConfiguration {
+}
+```
+
+The main feature of this annotation is that it is meta-annotated with
+`@ImportAutoConfiguration`. With that in place we can add the new
+annotation to our application:
+
+```java
+@SpringBootConfiguration
+@EnableWebFluxAutoConfiguration
+@RestController
+public class DemoApplication {
+
+  @GetMapping("/")
+  public Mono<String> home() {
+    return Mono.just("Hello World");
+  }
+
+  public void main(String[] args) {
+    SpringApplication.run(DemoApplication.class, args);
+  }
+
+}
+```
+
+and list the actual configuration classes in `/META-INF/spring.factories`:
+
+```
+com.example.config.EnableWebFluxAutoConfiguration=\
+org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration,\
+org.springframework.boot.autoconfigure.web.reactive.ReactiveWebServerFactoryAutoConfiguration,\
+org.springframework.boot.autoconfigure.web.reactive.error.ErrorWebFluxAutoConfiguration,\
+org.springframework.boot.autoconfigure.web.reactive.HttpHandlerAutoConfiguration,\
+org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration,\
+org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
+```
+
+The advantages of doing this are that the application code no longer
+has to manually enumerate the configurations, and also that the
+ordering is now taken care of by Spring Boot (the properties file
+entry is sorted before it is used). The disadvantage is that it is
+only useful for applications which need precisely these features, and
+has to be replaced or augmented in any application that wants to do
+something a bit different. It is still fast though - Spring Boot does
+a little bit of extra work for the book keeping (sorting and
+ordering), but not really very much. It will probably still start in
+less than 700ms on the right hardware, with the right JVM flags.
+
+== Functional Bean Definitions
+
+In the earlier article I mentioned that functional bean definitions
+would be the most efficient way to get an application started with
+Spring. This is still the case, and we can squeeze an extra 10% or so
+out of this application by re-writing all the Spring Boot
+autoconfigurations as `ApplicationContextInitializers`. You could do
+that manually, or you could use some initializers that have already
+been prepared for you, as long as you don't mind trying out some
+experimental features. There are 2 projects currently active exploring
+the idea of new tools and new programming models based on functional
+bean definitions: https://github.com/spring-projects/spring-fu[Spring
+Fu] and
+https://github.com/spring-projects-experimental/spring-init[Spring
+Init]. Both provide at least a minimal set of functional bean
+definitions replacing or wrapping the Spring Boot
+autoconfigurations. Spring Fu is API (DSL) based, and doesn't use
+reflection or annotations. Spring Init has the functional bean
+definitions and also has a prototype of an annotation-based
+programming model for "a la carte" configuration. Both are covered
+in more detail elsewhere.
+
+The main point to note here is that functional bean definitions are
+faster, but if that is your main concern, remember that it is only a
+10% effect. As soon as you put all the features back in the
+application that we stripped down above, you are back to loading all
+the necessary classes and back to roughly the same approximate startup
+time as well. To put this another way, the cost of the
+`@Configuration` processing at runtime is not completely negligible,
+but it also isn't very high (10% or so in these tiny apps, or maybe
+100ms).
+
+== Summary and Future Directions
+
+Here's a graph summarizing some benchmark results from a different
+application, the
+https://github.com/spring-projects/spring-petclinic[Spring PetClinic]:
+
+.Petclinic Startup Time (Seconds)
+image::https://docs.google.com/spreadsheets/d/e/2PACX-1vQpSEfx0Y1W9aD3XVyn91-S0jtUp2DRCQSy_W_LMGyMR91YLAQ1mL7MiR1BRd8VzshvtuxzL6WAnlxf/pubchart?oid=1003506885&format=image[]
+
+It's not a "real" application, but it is heavier than the simple
+sample, and uses a lot more features at runtime (like Hibernate for
+example), so it is somewhat more realistic. There are two
+versions, "demo" and "actr", where the latter is just the same but
+with Actuators. For both samples, the fastest startup time is the
+yellow dot, which is functional bean definitions, but only 10% behind
+that (about 200ms in this app) are the "a la carte" options (green and
+red). Green uses a custom annotation like the
+`@EnableWebFluxAutoConfiguration` one above. Red is a different "a la
+carte" option where groups of autoconfigurations can be imported
+together via a different custom annotation, currently named
+`@SpringInitApplication` and being prototyped in Spring Init. Blue is
+the fully leaded autoconfiguration (out of the box Spring Boot).
+
+Spring Boot autoconfiguration is hugely convenient, but can be
+characterized as "all you can eat". Currently (as of 2.1.x) it is
+maybe providing more features than some applications use or
+require. In the "a la carte" approach, you can use Spring Boot as a
+convenient collection of prepared and pre-tested configurations and
+choose which parts you use. If you do that then
+`@ImportAutoConfiguration` is an important part of the toolkit, but
+exactly how you should best use it might change as we research this
+topic further. Future versions of Spring Boot, and possibly other new
+projects like Spring Fu or Spring Init, will make it easier to narrow
+the choice of configurations used at runtime, either automatically or
+by explicit choice. At the end of the day, `@Configuration` processing
+at runtime is not free, but it isn't particularly expensive either
+(especially with Spring Boot 2.1.x). The smaller number of features
+you use, the fewer classes are loaded, which lead to faster
+startup. At the end of the day we don't expect
+`@EnableAutoConfiguration` to lose its value or its popularity, and
+remember your mileage may vary: the PetClinic and simple samples in
+this article are not a guide to what you can expect with larger, more
+complex applications.

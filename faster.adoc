@@ -13,8 +13,8 @@ When all things are considered, remember that Spring was designed _ab initio_ to
 * Packaging: an exploded jar with the application's own main is always faster
 * Server: there is no measureable difference between Tomcat, Jetty and Undertow
 * Netty is a _bit_ faster on startup - you won't notice in a large app
-* The more features you use, the more classes are loaded, and class loading is takes about 80% of startup time
-* Functional bean definitions rule
+* The more features you use, the more classes are loaded, and class loading takes about 80% of startup time
+* Functional bean definitions rule - you might see 40% faster start up in some apps
 * If you can't use functional beans then manually choosing a set of Spring Boot autoconfigurations is usually faster than `@EnableAutoConfiguration`
 * A minimal Spring Boot app with an HTTP endpoint starts in <1sec and uses <10MB heap
 
@@ -56,7 +56,7 @@ in https://github.com/dsyer/spring-boot-allocations[this project] you can copy.
 
 A more extreme approach is to choose all the `@Configuration` classes manually, instead of using `@EnableAutoConfiguration`. This is fiddly and error prone, and you lose some of the benefits of autoconfiguration, but once done should be stable for any given codebase. The main benefit of this approach is really leaving out beans that you are not using. It is a fallacy to assume that autoconfiguration is slower because it "scans the classpath". The candidate autoconfiguration classes are selected very quickly without loading any of the classes, so this aspect is covered very efficiently and has been optimized extremely aggressively. But you might find that the default autoconfiguration settings choose things that you don't end up using. 
 
-The most extreme choice is to re-write all your application configuration using functional bean definitions. This includes all the Spring Boot autoconfiguration you are using, most of which can be re-used, but it's stll manual work to identify which classes to use and register all the bean definitions. If you try this approach you might see a 2x improvement in startup time. Look at the `BuncApplication` in the https://github.com/dsyer/spring-boot-micro-apps[micro apps] to see how to start Spring Boot without the `@Configuration` class processor.
+The most extreme choice is to re-write all your application configuration using functional bean definitions. This includes all the Spring Boot autoconfiguration you are using, most of which can be re-used, but it's still manual work to identify which classes to use and register all the bean definitions. If you try this approach you might see a 2x improvement in startup time. Look at the `BuncApplication` in the https://github.com/dsyer/spring-boot-micro-apps[micro apps] to see how to start Spring Boot without the `@Configuration` class processor.
 
 Excluding `netty-transport-native-epoll` also boosts the startup time by 30ms or so (Linux only). This is a regression since Spring Boot 2.0, so once we understand it a bit better we can probably eliminate it.
 

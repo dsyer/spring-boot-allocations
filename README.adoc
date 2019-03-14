@@ -30,7 +30,7 @@ Spring Boot autoconfiguration is indexed, and every little helps.
 https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-application-property-files[Spring Boot config file(s)]
 with `spring.config.location` (command line argument or System property etc.).
 Example for testing in IDE:
-`spring.config.location=file://./src/main/resources/application.properties`.
+`spring.config.location=file:./src/main/resources/application.properties`.
 * Switch off JMX if you don't need it with `spring.jmx.enabled=false`
 * Make bean definitions lazy by default. There's nothing in Spring
 Boot that does this, but there's a `LazyInitBeanFactoryPostProcessor`

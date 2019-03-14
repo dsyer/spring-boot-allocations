@@ -59,6 +59,7 @@ public class LauncherState implements Runnable, Closeable {
 	public void start() throws Exception {
 		System.setProperty("server.port", "0");
 		System.setProperty("spring.jmx.enabled", "false");
+		System.setProperty("spring.main.lazy-initialization", "true");
 		System.setProperty("spring.config.location",
 				"file:./src/main/resources/application.properties");
 		System.setProperty("spring.main.logStartupInfo", "false");

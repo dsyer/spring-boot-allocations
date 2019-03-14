@@ -18,8 +18,6 @@ package com.example.config;
 
 import java.io.IOException;
 
-import com.example.aspects.AnnotationProcessingInterceptor;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -34,58 +32,61 @@ import org.springframework.util.ClassUtils;
 
 public class StandardMetadataReaderFactory implements MetadataReaderFactory {
 
-    @Override
-    public MetadataReader getMetadataReader(String className) throws IOException {
-        ClassPathResource resource = new ClassPathResource(
-                ClassUtils.convertClassNameToResourcePath(className));
-        return getMetadataReader(resource, className);
-    }
+	@Override
+	public MetadataReader getMetadataReader(String className) throws IOException {
+		ClassPathResource resource = new ClassPathResource(
+				ClassUtils.convertClassNameToResourcePath(className));
+		return getMetadataReader(resource, className);
+	}
 
-    private StandardMetadataReader getMetadataReader(ClassPathResource resource, String className) {
-        if (ClassUtils.isPresent(className, null)) {
-            return new StandardMetadataReader(resource, 
-                    ClassUtils.resolveClassName(className, null));
-        }
-        throw new IllegalArgumentException("Cannot load class: " + className);
-    }
+	private StandardMetadataReader getMetadataReader(ClassPathResource resource,
+			String className) {
+		if (ClassUtils.isPresent(className, null)) {
+			return new StandardMetadataReader(resource,
+					ClassUtils.resolveClassName(className, null));
+		}
+		throw new IllegalArgumentException("Cannot load class: " + className);
+	}
 
-    @Override
-    public MetadataReader getMetadataReader(Resource resource) throws IOException {
-        if (resource instanceof ClassPathResource) {
-            ClassPathResource cp = (ClassPathResource) resource;
-            String className = ClassUtils.convertResourcePathToClassName(cp.getPath());
-            return getMetadataReader(cp, className);
-        }
-        throw new IllegalArgumentException("Cannot find class name for: " + resource);
-    }
+	@Override
+	public MetadataReader getMetadataReader(Resource resource) throws IOException {
+		if (resource instanceof ClassPathResource) {
+			ClassPathResource cp = (ClassPathResource) resource;
+			String className = ClassUtils.convertResourcePathToClassName(cp.getPath());
+			return getMetadataReader(cp, className);
+		}
+		throw new IllegalArgumentException("Cannot find class name for: " + resource);
+	}
 
 }
 
 class StandardMetadataReader implements MetadataReader {
 
-    private static Log logger = LogFactory.getLog(StandardMetadataReader.class);
-    private ClassPathResource resource;
-    private StandardAnnotationMetadata metadata;
+	private static Log logger = LogFactory.getLog(StandardMetadataReader.class);
 
-    public StandardMetadataReader(ClassPathResource resource, Class<?> type) {
-        this.resource = resource;
-        this.metadata = new StandardAnnotationMetadata(type);
-        logger.info("Metadata: " + type + " = " + metadata);
-    }
+	private ClassPathResource resource;
 
-    @Override
-    public Resource getResource() {
-        return resource;
-    }
+	private StandardAnnotationMetadata metadata;
 
-    @Override
-    public ClassMetadata getClassMetadata() {
-        return metadata;
-    }
+	public StandardMetadataReader(ClassPathResource resource, Class<?> type) {
+		this.resource = resource;
+		this.metadata = new StandardAnnotationMetadata(type);
+		logger.info("Metadata: " + type + " = " + metadata);
+	}
 
-    @Override
-    public AnnotationMetadata getAnnotationMetadata() {
-        return metadata;
-    }
+	@Override
+	public Resource getResource() {
+		return resource;
+	}
+
+	@Override
+	public ClassMetadata getClassMetadata() {
+		return metadata;
+	}
+
+	@Override
+	public AnnotationMetadata getAnnotationMetadata() {
+		return metadata;
+	}
 
 }

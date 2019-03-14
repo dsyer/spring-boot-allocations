@@ -9,6 +9,9 @@ import com.example.config.BeanCountingApplicationListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import reactor.core.publisher.Hooks;
+import reactor.core.publisher.Mono;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
@@ -79,9 +82,6 @@ import org.springframework.web.server.i18n.LocaleContextResolver;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
-
-import reactor.core.publisher.Hooks;
-import reactor.core.publisher.Mono;
 
 /**
  * Functional bean definitions. No Spring Boot.
