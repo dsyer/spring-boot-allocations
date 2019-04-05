@@ -23,8 +23,7 @@ import org.springframework.beans.factory.annotation.QualifierAnnotationAutowireC
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
-import org.springframework.boot.context.properties.ConfigurationBeanFactoryMetadata;
-import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessorRegistrar;
 import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
@@ -93,7 +92,8 @@ public class AutoApplication implements Runnable, Closeable,
 				beanFactory
 						.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
 			}
-			// N.B. ContextAnnotationAutowireCandidateResolver is normal, but that's more expensive
+			// N.B. ContextAnnotationAutowireCandidateResolver is normal, but that's more
+			// expensive
 			// (checks for @Lazy)
 			if (!(beanFactory
 					.getAutowireCandidateResolver() instanceof QualifierAnnotationAutowireCandidateResolver)) {
@@ -105,9 +105,8 @@ public class AutoApplication implements Runnable, Closeable,
 		}
 		AutoConfigurationPackages.register(context,
 				ClassUtils.getPackageName(getClass()));
-		context.registerBean(ConfigurationPropertiesBindingPostProcessor.class);
-		context.registerBean(ConfigurationBeanFactoryMetadata.BEAN_NAME,
-				ConfigurationBeanFactoryMetadata.class);
+		new ConfigurationPropertiesBindingPostProcessorRegistrar()
+				.registerBeanDefinitions(null, context);
 		context.addBeanFactoryPostProcessor(new AutoConfigurations(context));
 		context.registerBean(AutoApplication.class, () -> this);
 	}
