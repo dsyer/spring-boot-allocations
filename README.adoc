@@ -1,6 +1,6 @@
 This project contains some benchmarks on Spring Boot startup time. The
 findings here have shown us how to make several optimizations in
-Spring Boot 2.1 and Spring 5.1, so those are highlighted. The
+Spring Boot 2.1, 2.2 and Spring 5.1, 5.2, so those are highlighted. The
 optimizations and quite a few of the focused benchmarks concentrate on
 memory allocations and garbage collection pressure, which are hard to
 measure, but quite easy to run into problems with on startup.
@@ -24,17 +24,15 @@ in a different filesystem layer anyway.
   - Logback: use `slf4j-jdk14` instead
 * Use the `spring-context-indexer`. It's not going to add much, but
 Spring Boot autoconfiguration is indexed, and every little helps.
-* Don't use actuators if you can afford not to.
+* Before Boot 2.2, don't use actuators if you can afford not to.
 * Use Spring Boot 2.1 and Spring 5.1 when they are available.
 * Fix the location of the
 https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-external-config-application-property-files[Spring Boot config file(s)]
 with `spring.config.location` (command line argument or System property etc.).
 Example for testing in IDE:
 `spring.config.location=file:./src/main/resources/application.properties`.
-* Switch off JMX if you don't need it with `spring.jmx.enabled=false`
-* Make bean definitions lazy by default. There's nothing in Spring
-Boot that does this, but there's a `LazyInitBeanFactoryPostProcessor`
-in this project you can copy.
+* Before Boot 2.2, switch off JMX if you don't need it with `spring.jmx.enabled=false`
+* Make bean definitions lazy by default. In Spring Boot use `spring.main.lazy-initialization=true`. Spring Boot 2.1 also has `spring.data.jpa.repositories.bootstrap-mode=lazy`.
 * Unpack the fat jar and run with an explicit classpath.
 * Run the JVM with `-noverify`. Also consider `-XX:TieredStopAtLevel=1`
 (that will slow down the JIT later at the expense of the saved startup time).
@@ -42,11 +40,12 @@ in this project you can copy.
 A more extreme choice is to re-write all your application
 configuration using functional bean definitions. This includes all the
 Spring Boot autoconfiguration you are using, most of which can be
-re-used, but it's stll manual work to identify which classes to use
+re-used, but it's still manual work to identify which classes to use
 and register all the bean definitions. If you try this approach you
-might see a 2x improvement in startup time. Look at the
-`BuncApplication` to see how to start Spring Boot without the
-`@Configuration` class processor.
+might see a further 10% improvement in startup time (or more if you
+don't use the lazy flags but that's not related top the functional
+beans). Look at the `BuncApplication` to see how to start Spring Boot
+without the `@Configuration` class processor.
 
 Excluding `netty-transport-native-epoll` also boosts the functional
 bean apps by about 30ms (but not noticeably the non-functional ones),
