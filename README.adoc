@@ -249,7 +249,9 @@ of course nothing from `ConfigurationClassPostProcessor`.
 
 NOTE: if you are using Spring Tool Suite be sure to shut down the
 invasive JVM agent attach feature (`Window >> Preferences >> Spring >>
-Boot Language Server Extension` uncheck all boxes) before you generate
+Boot Language Server Extension` and/or `Window >> Preferences >>
+Language Servers >> Spring Language Servers >> Spring Boot Language Servers`
+uncheck all boxes) before you generate
 flame graphs from Java application launchers. Otherwise you get noise
 from Eclipse trying to connect to your app and inspect it.
 
