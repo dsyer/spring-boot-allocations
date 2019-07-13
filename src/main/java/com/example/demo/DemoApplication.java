@@ -15,7 +15,7 @@ import static org.springframework.web.reactive.function.server.ServerResponse.ok
 
 import reactor.core.publisher.Mono;
 
-@SpringBootApplication
+@SpringBootApplication(proxyBeanMethods = false)
 public class DemoApplication implements Runnable, Closeable {
 
 	private ConfigurableApplicationContext context;

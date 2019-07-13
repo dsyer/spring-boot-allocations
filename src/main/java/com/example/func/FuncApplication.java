@@ -6,13 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.example.config.BeanCountingApplicationListener;
-import com.example.config.LazyInitBeanFactoryPostProcessor;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
 import org.springframework.boot.autoconfigure.gson.GsonAutoConfiguration;
@@ -21,10 +19,8 @@ import org.springframework.boot.autoconfigure.gson.GsonProperties;
 import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
 import org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration;
 import org.springframework.boot.autoconfigure.http.HttpProperties;
-import org.springframework.boot.autoconfigure.reactor.core.ReactorCoreProperties;
 import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
-import org.springframework.boot.autoconfigure.web.client.RestTemplateAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.reactive.ReactiveWebServerFactoryAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.reactive.ReactiveWebServerFactoryCustomizer;
 import org.springframework.boot.autoconfigure.web.reactive.ResourceHandlerRegistrationCustomizer;
@@ -35,9 +31,6 @@ import org.springframework.boot.autoconfigure.web.reactive.WebFluxRegistrations;
 import org.springframework.boot.autoconfigure.web.reactive.error.ErrorWebFluxAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessorRegistrar;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.boot.web.client.RestTemplateCustomizer;
-import org.springframework.boot.web.client.RestTemplateRequestCustomizer;
 import org.springframework.boot.web.codec.CodecCustomizer;
 import org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory;
 import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
@@ -125,7 +118,6 @@ public class FuncApplication implements Runnable, Closeable,
 	@Override
 	public void run() {
 		ReactiveWebServerApplicationContext context = new ReactiveWebServerApplicationContext();
-		context.addBeanFactoryPostProcessor(new LazyInitBeanFactoryPostProcessor());
 		initialize(context);
 		context.refresh();
 		System.err.println(MARKER);
@@ -148,8 +140,6 @@ public class FuncApplication implements Runnable, Closeable,
 		registerHttpHandlerAutoConfiguration();
 		registerGsonAutoConfiguration();
 		registerHttpMessageConvertersAutoConfiguration();
-		registerReactorCoreAutoConfiguration();
-		registerRestTemplateAutoConfiguration();
 		registerWebClientAutoConfiguration();
 	}
 
@@ -186,8 +176,6 @@ public class FuncApplication implements Runnable, Closeable,
 		context.registerBean(WebFluxProperties.class, () -> new WebFluxProperties());
 		context.registerBean(GsonProperties.class, () -> new GsonProperties());
 		context.registerBean(HttpProperties.class, () -> new HttpProperties());
-		context.registerBean(ReactorCoreProperties.class,
-				() -> new ReactorCoreProperties());
 	}
 
 	private void registerWebServerFactoryCustomizerBeanPostProcessor() {
@@ -229,9 +217,23 @@ public class FuncApplication implements Runnable, Closeable,
 		return new ErrorWebFluxAutoConfiguration(serverProperties);
 	}
 
+	/**
+	 * Trivial subclass to prevent <code>@Bean</code> configuration kicking in in
+	 * {@link CuncApplication}.
+	 *
+	 */
+	private static class NotEnableWebFluxConfiguration
+			extends EnableWebFluxConfiguration {
+
+		public NotEnableWebFluxConfiguration(WebFluxProperties webFluxProperties,
+				ObjectProvider<WebFluxRegistrations> webFluxRegistrations) {
+			super(webFluxProperties, webFluxRegistrations);
+		}
+	}
+
 	private void registerWebFluxAutoConfiguration() {
-		context.registerBean(EnableWebFluxConfiguration.class,
-				() -> new EnableWebFluxConfiguration(
+		context.registerBean(NotEnableWebFluxConfiguration.class,
+				() -> new NotEnableWebFluxConfiguration(
 						context.getBean(WebFluxProperties.class),
 						context.getBeanProvider(WebFluxRegistrations.class)));
 		context.registerBean(HandlerFunctionAdapter.class, () -> context
@@ -350,25 +352,6 @@ public class FuncApplication implements Runnable, Closeable,
 		return converter;
 	}
 
-	private void registerReactorCoreAutoConfiguration() {
-		context.registerBean(ReactorConfiguration.class,
-				() -> new ReactorConfiguration());
-	}
-
-	private void registerRestTemplateAutoConfiguration() {
-		RestTemplateAutoConfiguration config = new RestTemplateAutoConfiguration();
-		context.registerBean(RestTemplateBuilder.class,
-				() -> config.restTemplateBuilder(
-						context.getDefaultListableBeanFactory()
-								.getBeanProvider(HttpMessageConverters.class),
-						context.getDefaultListableBeanFactory()
-								.getBeanProvider(RestTemplateCustomizer.class),
-						context.getDefaultListableBeanFactory()
-								.getBeanProvider(ResolvableType.forClassWithGenerics(
-										RestTemplateRequestCustomizer.class,
-										Object.class))));
-	}
-
 	private void registerWebClientAutoConfiguration() {
 		context.registerBean(WebClient.Builder.class, () -> {
 			WebClientAutoConfiguration config = new WebClientAutoConfiguration(
@@ -376,17 +359,6 @@ public class FuncApplication implements Runnable, Closeable,
 							List.class, WebClientCustomizer.class)));
 			return config.webClientBuilder();
 		});
-	}
-
-}
-
-class ReactorConfiguration {
-
-	@Autowired
-	protected void initialize(ReactorCoreProperties properties) {
-		if (properties.isDebug()) {
-			Hooks.onOperatorDebug();
-		}
 	}
 
 }

@@ -3,6 +3,8 @@ package com.example.manual;
 import java.io.Closeable;
 import java.io.IOException;
 
+import reactor.core.publisher.Mono;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
@@ -10,9 +12,7 @@ import org.springframework.boot.autoconfigure.gson.GsonAutoConfiguration;
 import org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration;
 import org.springframework.boot.autoconfigure.http.codec.CodecsAutoConfiguration;
 import org.springframework.boot.autoconfigure.info.ProjectInfoAutoConfiguration;
-import org.springframework.boot.autoconfigure.reactor.core.ReactorCoreAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.client.RestTemplateAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.embedded.EmbeddedWebServerFactoryCustomizerAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.reactive.HttpHandlerAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.reactive.ReactiveWebServerFactoryAutoConfiguration;
@@ -29,8 +29,6 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
-
-import reactor.core.publisher.Mono;
 
 /**
  * Imports autoconfigurations manually. Doesn't use {@link SpringApplication}.
@@ -91,8 +89,7 @@ public class ManualApplication implements Runnable, Closeable {
 			WebFluxAutoConfiguration.class, HttpHandlerAutoConfiguration.class,
 			ConfigurationPropertiesAutoConfiguration.class, GsonAutoConfiguration.class,
 			HttpMessageConvertersAutoConfiguration.class,
-			ProjectInfoAutoConfiguration.class, ReactorCoreAutoConfiguration.class,
-			ReactiveSecurityAutoConfiguration.class, RestTemplateAutoConfiguration.class,
+			ProjectInfoAutoConfiguration.class, ReactiveSecurityAutoConfiguration.class,
 			EmbeddedWebServerFactoryCustomizerAutoConfiguration.class,
 			WebClientAutoConfiguration.class })
 	// @EnableAutoConfiguration
