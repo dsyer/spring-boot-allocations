@@ -376,17 +376,17 @@ Here are some results from latest Spring Boot 2.2 snapshots:
 
 ```
 Benchmark             Mode  Cnt  Score   Error  Units
-MainBenchmark.demo      ss   10  0.540 ± 0.049   s/op
-MainBenchmark.boot      ss   10  0.500 ± 0.046   s/op
-MainBenchmark.manual    ss   10  0.567 ± 0.031   s/op
-MainBenchmark.auto      ss   10  0.474 ± 0.043   s/op
-MainBenchmark.cunc      ss   10  0.389 ± 0.035   s/op
-MainBenchmark.bunc      ss   10  0.354 ± 0.041   s/op
-MainBenchmark.func      ss   10  0.412 ± 0.033   s/op
-MainBenchmark.shared    ss   10  0.093 ± 0.040   s/op
+MainBenchmark.demo      ss   10  0.899 ± 0.168   s/op
+MainBenchmark.boot      ss   10  0.750 ± 0.190   s/op
+MainBenchmark.manual    ss   10  0.873 ± 0.184   s/op
+MainBenchmark.auto      ss   10  0.741 ± 0.134   s/op
+MainBenchmark.cunc      ss   10  0.598 ± 0.146   s/op
+MainBenchmark.bunc      ss   10  0.547 ± 0.092   s/op
+MainBenchmark.func      ss   10  0.628 ± 0.098   s/op
+MainBenchmark.shared    ss   10  0.166 ± 0.048   s/op
 ```
 
-Older results for Spring Boot 2.0:
+Older results for Spring Boot 2.1 (comments below refer to these):
 
 ```
 Benchmark               Mode  Cnt  Score   Error  Units
