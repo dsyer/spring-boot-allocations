@@ -19,13 +19,13 @@ package com.example.bench;
 import com.example.auto.AutoApplication;
 import com.example.boot.BootApplication;
 import com.example.func.FuncApplication;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-
-import org.springframework.boot.test.rule.OutputCapture;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,19 +33,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Dave Syer
  *
  */
+@ExtendWith(OutputCaptureExtension.class)
 public class LauncherStateTests {
 
-	@Rule
-	public OutputCapture output = new OutputCapture();
 	private LauncherState state;
 
-	@Before
+	@BeforeEach
 	public void init() throws Exception {
 		state = new LauncherState();
 		state.start();
 	}
 
-	@After
+	@AfterEach
 	public void close() throws Exception {
 		if (state != null) {
 			state.close();
@@ -53,44 +52,39 @@ public class LauncherStateTests {
 	}
 
 	@Test
-	public void isolated() throws Exception {
+	public void isolated(CapturedOutput output) throws Exception {
 		state.isolated();
-		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
 	}
 
 	@Test
-	public void shared() throws Exception {
+	public void shared(CapturedOutput output) throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
 		state.shared();
-		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
 	}
 
 	@Test
-	public void func() throws Exception {
+	public void func(CapturedOutput output) throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
 		state.setMainClass(FuncApplication.class);
 		state.shared();
-		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
 	}
 
 	@Test
-	public void boot() throws Exception {
+	public void boot(CapturedOutput output) throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
 		state.setMainClass(BootApplication.class);
 		state.shared();
-		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
 	}
 
 	@Test
-	public void auto() throws Exception {
+	public void auto(CapturedOutput output) throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
 		state.setMainClass(AutoApplication.class);
 		state.shared();
-		output.flush();
 		assertThat(output.toString()).contains("Benchmark app started");
 	}
 

@@ -25,7 +25,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.ClassMetadata;
-import org.springframework.core.type.StandardAnnotationMetadata;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.util.ClassUtils;
@@ -66,11 +65,11 @@ class StandardMetadataReader implements MetadataReader {
 
 	private ClassPathResource resource;
 
-	private StandardAnnotationMetadata metadata;
+	private AnnotationMetadata metadata;
 
 	public StandardMetadataReader(ClassPathResource resource, Class<?> type) {
 		this.resource = resource;
-		this.metadata = new StandardAnnotationMetadata(type);
+		this.metadata = AnnotationMetadata.introspect(type);
 		logger.info("Metadata: " + type + " = " + metadata);
 	}
 

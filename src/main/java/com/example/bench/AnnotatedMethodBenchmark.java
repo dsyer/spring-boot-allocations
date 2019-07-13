@@ -25,7 +25,7 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.type.StandardAnnotationMetadata;
+import org.springframework.core.type.AnnotationMetadata;
 
 @Measurement(iterations = 5)
 @Warmup(iterations = 3)
@@ -73,7 +73,7 @@ public class AnnotatedMethodBenchmark {
 		}
 
 		public void run() {
-			if (new StandardAnnotationMetadata(target).hasAnnotatedMethods(Bean.class.getName())) {
+			if (AnnotationMetadata.introspect(target).hasAnnotatedMethods(Bean.class.getName())) {
 				throw new IllegalStateException();
 			}
 		}

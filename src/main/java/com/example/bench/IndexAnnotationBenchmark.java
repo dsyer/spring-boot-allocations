@@ -27,7 +27,6 @@ import java.util.ServiceLoader;
 import com.example.config.ComponentIndex;
 import com.example.config.ComponentIndex.Entry;
 import com.example.config.ComponentIndexer;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
@@ -37,7 +36,7 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
-import org.springframework.core.type.StandardAnnotationMetadata;
+import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
@@ -74,7 +73,7 @@ public class IndexAnnotationBenchmark {
 	}
 
 	public static void create(MultiValueMap<String, String> map, Class<?> target) {
-		new StandardAnnotationMetadata(target)
+		AnnotationMetadata.introspect(target)
 				.getAnnotationAttributes(ComponentIndex.class.getName(), true)
 				.forEach((name, object) -> {
 					Entry[] entries = (Entry[]) object;

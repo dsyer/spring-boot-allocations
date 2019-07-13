@@ -50,8 +50,8 @@ import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.MethodMetadata;
-import org.springframework.core.type.StandardAnnotationMetadata;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 
@@ -72,7 +72,7 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 
 	public Class<?>[] config() {
 		String[] imports = selectImports(
-				new StandardAnnotationMetadata(AutoConfigurations.class));
+				AnnotationMetadata.introspect(AutoConfigurations.class));
 		Class<?>[] types = new Class<?>[imports.length];
 		int i = 0;
 		for (String config : imports) {
@@ -128,7 +128,7 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 		ConditionEvaluator evaluator = new ConditionEvaluator(registry, getEnvironment(),
 				getResourceLoader());
 		for (Class<?> type : config()) {
-			StandardAnnotationMetadata metadata = new StandardAnnotationMetadata(type);
+			AnnotationMetadata metadata = AnnotationMetadata.introspect(type);
 			if (evaluator.shouldSkip(metadata, ConfigurationPhase.REGISTER_BEAN)) {
 				continue;
 			}
@@ -137,13 +137,13 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 	}
 
 	private void register(BeanDefinitionRegistry registry, ConditionEvaluator evaluator,
-			Class<?> type, StandardAnnotationMetadata metadata) {
+			Class<?> type, AnnotationMetadata metadata) {
 		for (Class<?> nested : type.getDeclaredClasses()) {
 			if (Modifier.isStatic(nested.getModifiers())) {
 				try {
 					if (!registry.containsBeanDefinition(nested.getName())) {
-						StandardAnnotationMetadata nestedMetadata = new StandardAnnotationMetadata(
-								nested);
+						AnnotationMetadata nestedMetadata = AnnotationMetadata
+								.introspect(nested);
 						if (nestedMetadata.hasAnnotation(Configuration.class.getName())) {
 							if (!evaluator.shouldSkip(nestedMetadata,
 									ConfigurationPhase.REGISTER_BEAN)) {
@@ -169,8 +169,8 @@ class AutoConfigurations extends AutoConfigurationImportSelector
 						registrar.registerBeanDefinitions(metadata, registry);
 					}
 					try {
-						StandardAnnotationMetadata nestedMetadata = new StandardAnnotationMetadata(
-								imported);
+						AnnotationMetadata nestedMetadata = AnnotationMetadata
+								.introspect(imported);
 						if (!registry.containsBeanDefinition(imported.getName())
 								&& !evaluator.shouldSkip(nestedMetadata,
 										ConfigurationPhase.REGISTER_BEAN)) {

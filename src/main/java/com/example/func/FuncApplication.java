@@ -9,7 +9,6 @@ import com.example.config.BeanCountingApplicationListener;
 import com.example.config.LazyInitBeanFactoryPostProcessor;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
@@ -38,6 +37,7 @@ import org.springframework.boot.autoconfigure.web.reactive.function.client.WebCl
 import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessorRegistrar;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.client.RestTemplateCustomizer;
+import org.springframework.boot.web.client.RestTemplateRequestCustomizer;
 import org.springframework.boot.web.codec.CodecCustomizer;
 import org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory;
 import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
@@ -361,9 +361,12 @@ public class FuncApplication implements Runnable, Closeable,
 				() -> config.restTemplateBuilder(
 						context.getDefaultListableBeanFactory()
 								.getBeanProvider(HttpMessageConverters.class),
-						context.getDefaultListableBeanFactory().getBeanProvider(
-								ResolvableType.forClassWithGenerics(List.class,
-										RestTemplateCustomizer.class))));
+						context.getDefaultListableBeanFactory()
+								.getBeanProvider(RestTemplateCustomizer.class),
+						context.getDefaultListableBeanFactory()
+								.getBeanProvider(ResolvableType.forClassWithGenerics(
+										RestTemplateRequestCustomizer.class,
+										Object.class))));
 	}
 
 	private void registerWebClientAutoConfiguration() {
@@ -381,7 +384,7 @@ class ReactorConfiguration {
 
 	@Autowired
 	protected void initialize(ReactorCoreProperties properties) {
-		if (properties.getStacktraceMode().isEnabled()) {
+		if (properties.isDebug()) {
 			Hooks.onOperatorDebug();
 		}
 	}
