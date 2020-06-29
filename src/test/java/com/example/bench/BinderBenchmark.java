@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
@@ -40,40 +41,49 @@ import org.springframework.core.env.StandardEnvironment;
 public class BinderBenchmark {
 
 	@Benchmark
+	@Testable
 	public void direct(DirectState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void map(MapState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void wrapped(WrappedState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void binder(BinderState state) throws Exception {
 		state.run();
 	}
 
 	@State(Scope.Thread)
 	public static class DirectState extends EnvironmentState {
+
 		private String[] value;
 
 		public void run() {
 			value = environment.getProperty("spring.profiles.active", String[].class);
 			assert value.length == 2;
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class MapState extends EnvironmentState {
+
 		private String[] value;
+
 		private MapConfigurationPropertySource source;
 
+		@Override
 		protected void init() {
 			super.init();
 			Map<String, String> map = new HashMap<>();
@@ -86,13 +96,17 @@ public class BinderBenchmark {
 			value = binder.bind("spring.profiles.active", String[].class).get();
 			assert value.length == 2;
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class WrappedState extends EnvironmentState {
+
 		private String[] value;
+
 		private ConfigurationPropertySource source;
 
+		@Override
 		protected void init() {
 			super.init();
 			source = new WrappedConfigurationPropertySource(environment);
@@ -103,10 +117,12 @@ public class BinderBenchmark {
 			value = binder.bind("spring.profiles.active", String[].class).get();
 			assert value.length == 2;
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class BinderState extends EnvironmentState {
+
 		private String[] value;
 
 		public void run() {
@@ -114,6 +130,7 @@ public class BinderBenchmark {
 			value = binder.bind("spring.profiles.active", String[].class).get();
 			assert value.length == 2;
 		}
+
 	}
 
 	public static void main(String[] args) {
@@ -131,8 +148,8 @@ public class BinderBenchmark {
 		protected void init() {
 			environment = new StandardEnvironment();
 			MutablePropertySources propertySources = environment.getPropertySources();
-			propertySources.addLast(new MapPropertySource("profiles",
-					Collections.singletonMap("spring.profiles.active", "one,two")));
+			propertySources.addLast(
+					new MapPropertySource("profiles", Collections.singletonMap("spring.profiles.active", "one,two")));
 		};
 
 	}

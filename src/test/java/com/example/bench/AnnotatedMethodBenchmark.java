@@ -15,6 +15,7 @@
  */
 package com.example.bench;
 
+import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -33,18 +34,21 @@ import org.springframework.core.type.AnnotationMetadata;
 public class AnnotatedMethodBenchmark {
 
 	@Benchmark
+	@Testable
 	public void count10(SimpleState state) throws Exception {
 		state.setTarget(Bogus1.class);
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void count20(SimpleState state) throws Exception {
 		state.setTarget(Bogus2.class);
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void count30(SimpleState state) throws Exception {
 		state.setTarget(Bogus3.class);
 		state.run();
@@ -52,8 +56,9 @@ public class AnnotatedMethodBenchmark {
 
 	@State(Scope.Thread)
 	public static class SimpleState extends AnnotatedMethodState {
+
 	}
-	
+
 	public static void main(String[] args) {
 		SimpleState state = new SimpleState();
 		state.setTarget(Bogus3.class);
@@ -81,71 +86,195 @@ public class AnnotatedMethodBenchmark {
 	}
 
 	static class Bogus1 {
-		public void method0() {}
-		public void method1() {}
-		public void method2() {}
-		public void method3() {}
-		public void method4() {}
-		public void method5() {}
-		public void method6() {}
-		public void method7() {}
-		public void method8() {}
-		public void method9() {}
+
+		public void method0() {
+		}
+
+		public void method1() {
+		}
+
+		public void method2() {
+		}
+
+		public void method3() {
+		}
+
+		public void method4() {
+		}
+
+		public void method5() {
+		}
+
+		public void method6() {
+		}
+
+		public void method7() {
+		}
+
+		public void method8() {
+		}
+
+		public void method9() {
+		}
+
 	}
 
 	static class Bogus2 {
-		public void method0() {}
-		public void method1() {}
-		public void method2() {}
-		public void method3() {}
-		public void method4() {}
-		public void method5() {}
-		public void method6() {}
-		public void method7() {}
-		public void method8() {}
-		public void method9() {}
-		public void method10() {}
-		public void method11() {}
-		public void method12() {}
-		public void method13() {}
-		public void method14() {}
-		public void method15() {}
-		public void method16() {}
-		public void method17() {}
-		public void method18() {}
-		public void method19() {}
+
+		public void method0() {
+		}
+
+		public void method1() {
+		}
+
+		public void method2() {
+		}
+
+		public void method3() {
+		}
+
+		public void method4() {
+		}
+
+		public void method5() {
+		}
+
+		public void method6() {
+		}
+
+		public void method7() {
+		}
+
+		public void method8() {
+		}
+
+		public void method9() {
+		}
+
+		public void method10() {
+		}
+
+		public void method11() {
+		}
+
+		public void method12() {
+		}
+
+		public void method13() {
+		}
+
+		public void method14() {
+		}
+
+		public void method15() {
+		}
+
+		public void method16() {
+		}
+
+		public void method17() {
+		}
+
+		public void method18() {
+		}
+
+		public void method19() {
+		}
+
 	}
 
 	static class Bogus3 {
-		public void method0() {}
-		public void method1() {}
-		public void method2() {}
-		public void method3() {}
-		public void method4() {}
-		public void method5() {}
-		public void method6() {}
-		public void method7() {}
-		public void method8() {}
-		public void method9() {}
-		public void method10() {}
-		public void method11() {}
-		public void method12() {}
-		public void method13() {}
-		public void method14() {}
-		public void method15() {}
-		public void method16() {}
-		public void method17() {}
-		public void method18() {}
-		public void method19() {}
-		public void method30() {}
-		public void method31() {}
-		public void method32() {}
-		public void method33() {}
-		public void method34() {}
-		public void method35() {}
-		public void method36() {}
-		public void method37() {}
-		public void method38() {}
-		public void method39() {}
+
+		public void method0() {
+		}
+
+		public void method1() {
+		}
+
+		public void method2() {
+		}
+
+		public void method3() {
+		}
+
+		public void method4() {
+		}
+
+		public void method5() {
+		}
+
+		public void method6() {
+		}
+
+		public void method7() {
+		}
+
+		public void method8() {
+		}
+
+		public void method9() {
+		}
+
+		public void method10() {
+		}
+
+		public void method11() {
+		}
+
+		public void method12() {
+		}
+
+		public void method13() {
+		}
+
+		public void method14() {
+		}
+
+		public void method15() {
+		}
+
+		public void method16() {
+		}
+
+		public void method17() {
+		}
+
+		public void method18() {
+		}
+
+		public void method19() {
+		}
+
+		public void method30() {
+		}
+
+		public void method31() {
+		}
+
+		public void method32() {
+		}
+
+		public void method33() {
+		}
+
+		public void method34() {
+		}
+
+		public void method35() {
+		}
+
+		public void method36() {
+		}
+
+		public void method37() {
+		}
+
+		public void method38() {
+		}
+
+		public void method39() {
+		}
+
 	}
+
 }

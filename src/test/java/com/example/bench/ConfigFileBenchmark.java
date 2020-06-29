@@ -15,6 +15,7 @@
  */
 package com.example.bench;
 
+import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -39,44 +40,52 @@ import org.springframework.core.env.StandardEnvironment;
 public class ConfigFileBenchmark {
 
 	@Benchmark
+	@Testable
 	public void simple(SimpleState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void directory(DirectoryState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void file(FileState state) throws Exception {
 		state.run();
 	}
 
 	@State(Scope.Thread)
 	public static class FileState extends ConfigFileState {
+
 		@Override
 		protected ConfigFileApplicationListener create() {
 			ConfigFileApplicationListener listener = new ConfigFileApplicationListener();
 			listener.setSearchLocations("file:./src/main/resources/application.properties");
-			return  listener;
+			return listener;
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class DirectoryState extends ConfigFileState {
+
 		@Override
 		protected ConfigFileApplicationListener create() {
 			ConfigFileApplicationListener listener = new ConfigFileApplicationListener();
 			listener.setSearchLocations("file:./src/main/resources/");
-			return  listener;
+			return listener;
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class SimpleState extends ConfigFileState {
+
 	}
-	
+
 	public static void main(String[] args) {
 		new SimpleState().run();
 	}
@@ -100,15 +109,20 @@ public class ConfigFileBenchmark {
 		public void run() {
 			SpringApplication application = new SpringApplication(MyApplication.class);
 			ConfigurableEnvironment environment = new StandardEnvironment();
-			ApplicationEnvironmentPreparedEvent envPrep = new ApplicationEnvironmentPreparedEvent(application, new String[0], environment );
+			ApplicationEnvironmentPreparedEvent envPrep = new ApplicationEnvironmentPreparedEvent(application,
+					new String[0], environment);
 			listener.onApplicationEvent(envPrep);
 			GenericApplicationContext context = new GenericApplicationContext();
 			context.setEnvironment(environment);
 			ApplicationPreparedEvent appPrep = new ApplicationPreparedEvent(application, new String[0], context);
 			listener.onApplicationEvent(appPrep);
 		}
+
 	}
-		
+
 	@SpringBootApplication
-	static class MyApplication {}
+	static class MyApplication {
+
+	}
+
 }

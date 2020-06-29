@@ -21,7 +21,7 @@ import com.example.func.BuncApplication;
 import com.example.func.CuncApplication;
 import com.example.func.FuncApplication;
 import com.example.manual.ManualApplication;
-
+import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -36,47 +36,55 @@ import org.openjdk.jmh.annotations.Warmup;
 public class MainBenchmark {
 
 	@Benchmark
+	@Testable
 	public void demo(LauncherState state) throws Exception {
 		state.isolated();
 	}
 
 	@Benchmark
+	@Testable
 	public void boot(LauncherState state) throws Exception {
 		state.setMainClass(BootApplication.class);
 		state.isolated();
 	}
 
 	@Benchmark
+	@Testable
 	public void manual(LauncherState state) throws Exception {
 		state.setMainClass(ManualApplication.class);
 		state.isolated();
 	}
 
 	@Benchmark
+	@Testable
 	public void cunc(LauncherState state) throws Exception {
 		state.setMainClass(CuncApplication.class);
 		state.isolated();
 	}
 
 	@Benchmark
+	@Testable
 	public void bunc(LauncherState state) throws Exception {
 		state.setMainClass(BuncApplication.class);
 		state.isolated();
 	}
 
 	@Benchmark
+	@Testable
 	public void func(LauncherState state) throws Exception {
 		state.setMainClass(FuncApplication.class);
 		state.isolated();
 	}
 
 	@Benchmark
+	@Testable
 	public void auto(LauncherState state) throws Exception {
 		state.setMainClass(AutoApplication.class);
 		state.isolated();
 	}
 
 	@Benchmark
+	@Testable
 	public void shared(LauncherState state) throws Exception {
 		state.shared();
 	}

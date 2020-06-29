@@ -16,7 +16,7 @@
 package com.example.bench;
 
 import com.example.demo.DemoApplication;
-
+import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -41,41 +41,53 @@ import org.springframework.core.type.classreading.SimpleMetadataReaderFactory;
 public class MetadataBenchmark {
 
 	@Benchmark
+	@Testable
 	public void caching(CachingState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void reference(ReferenceState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void simple(SimpleState state) throws Exception {
 		state.run();
 	}
 
 	@State(Scope.Thread)
 	public static class CachingState extends MetadataState {
+
+		@Override
 		protected MetadataReaderFactory createFactory() {
 			return new CachingMetadataReaderFactory();
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class ReferenceState extends MetadataState {
+
+		@Override
 		protected MetadataReaderFactory createFactory() {
 			return new ConcurrentReferenceCachingMetadataReaderFactory();
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class SimpleState extends MetadataState {
+
+		@Override
 		protected MetadataReaderFactory createFactory() {
 			return new SimpleMetadataReaderFactory();
 		}
+
 	}
-	
+
 	public static void main(String[] args) {
 		new SimpleState().run();
 	}
@@ -112,12 +124,14 @@ public class MetadataBenchmark {
 		}
 
 	}
-	
+
 	static class MyContext extends AnnotationConfigReactiveWebServerApplicationContext {
+
 		@Override
-		public void postProcessBeanFactory(
-				ConfigurableListableBeanFactory beanFactory) {
+		public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 			super.postProcessBeanFactory(beanFactory);
 		}
+
 	}
+
 }

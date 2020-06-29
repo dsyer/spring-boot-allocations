@@ -27,6 +27,7 @@ import java.util.ServiceLoader;
 import com.example.config.ComponentIndex;
 import com.example.config.ComponentIndex.Entry;
 import com.example.config.ComponentIndexer;
+import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
@@ -47,18 +48,21 @@ import org.springframework.util.StringUtils;
 public class IndexAnnotationBenchmark {
 
 	@Benchmark
+	@Testable
 	public void anno(AnnoState state) throws Exception {
 		state.setCount(8);
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void svce(ServiceState state) throws Exception {
 		state.setCount(8);
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void prop(PropertiesState state) throws Exception {
 		state.run();
 	}
@@ -73,8 +77,7 @@ public class IndexAnnotationBenchmark {
 	}
 
 	public static void create(MultiValueMap<String, String> map, Class<?> target) {
-		AnnotationMetadata.introspect(target)
-				.getAnnotationAttributes(ComponentIndex.class.getName(), true)
+		AnnotationMetadata.introspect(target).getAnnotationAttributes(ComponentIndex.class.getName(), true)
 				.forEach((name, object) -> {
 					Entry[] entries = (Entry[]) object;
 					for (Entry entry : entries) {
@@ -87,6 +90,7 @@ public class IndexAnnotationBenchmark {
 
 	@State(Scope.Thread)
 	public static class AnnoState {
+
 		private int count = 1;
 
 		public void run() {
@@ -116,8 +120,7 @@ public class IndexAnnotationBenchmark {
 		}
 
 		public void run() {
-			ServiceLoader<ComponentIndexer> loaded = ServiceLoader
-					.load(ComponentIndexer.class);
+			ServiceLoader<ComponentIndexer> loaded = ServiceLoader.load(ComponentIndexer.class);
 			MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
 			for (ComponentIndexer indexer : loaded) {
 				for (Class<?> target : indexer.indexes()) {
@@ -153,22 +156,19 @@ public class IndexAnnotationBenchmark {
 				List<Properties> result = new ArrayList<>();
 				while (urls.hasMoreElements()) {
 					URL url = urls.nextElement();
-					Properties properties = PropertiesLoaderUtils
-							.loadProperties(new UrlResource(url));
+					Properties properties = PropertiesLoaderUtils.loadProperties(new UrlResource(url));
 					result.add(properties);
 				}
 				result.forEach(p -> p.forEach((k, v) -> {
 					String key = (String) k;
-					String[] values = StringUtils
-							.commaDelimitedListToStringArray((String) v);
+					String[] values = StringUtils.commaDelimitedListToStringArray((String) v);
 					for (String value : values) {
 						map.add(key, value);
 					}
 				}));
 			}
 			catch (IOException ex) {
-				throw new IllegalStateException(
-						"Unable to load indexes from location [" + target + "]", ex);
+				throw new IllegalStateException("Unable to load indexes from location [" + target + "]", ex);
 			}
 			if (map.isEmpty()) {
 				throw new IllegalStateException();
@@ -212,6 +212,7 @@ public class IndexAnnotationBenchmark {
 	})
 // @formatter:on
 	static class Bogus {
+
 	}
 
 	public static class Indexer implements ComponentIndexer {
@@ -222,4 +223,5 @@ public class IndexAnnotationBenchmark {
 		}
 
 	}
+
 }

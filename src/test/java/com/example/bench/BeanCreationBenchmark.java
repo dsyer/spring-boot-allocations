@@ -16,6 +16,7 @@
 package com.example.bench;
 
 import org.aspectj.lang.Aspects;
+import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -45,46 +46,55 @@ import org.springframework.core.env.StandardEnvironment;
 public class BeanCreationBenchmark {
 
 	@Benchmark
+	@Testable
 	public void simple(SimpleState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void reflect(ReflectState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void proxy(ProxyState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void cglib(CglibState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void enhnc(EnhancerState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void proce(ProcessorState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void unpro(UnprocessorState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void funcs(FuncState state) throws Exception {
 		state.run();
 	}
 
 	@Benchmark
+	@Testable
 	public void bare(BareState state) throws Exception {
 		state.run();
 	}
@@ -94,7 +104,7 @@ public class BeanCreationBenchmark {
 		// UnprocessorState state = new UnprocessorState();
 		ProcessorState state = new ProcessorState();
 		state.start();
-		//SimpleState state = new SimpleState();
+		// SimpleState state = new SimpleState();
 		state.run();
 		Aspects.aspectOf(CallCounter.class).log();
 	}
@@ -107,10 +117,12 @@ public class BeanCreationBenchmark {
 			MyBean bean = config.bean(config.foo());
 			assert bean.getFoo() != null;
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class ReflectState {
+
 		public void run() {
 			MyBean bean;
 			try {
@@ -121,10 +133,12 @@ public class BeanCreationBenchmark {
 			catch (Exception e) {
 			}
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class ProxyState {
+
 		private Foo foo = new Foo("bar");
 
 		public void run() {
@@ -139,10 +153,12 @@ public class BeanCreationBenchmark {
 			catch (Exception e) {
 			}
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class CglibState {
+
 		private Foo foo = new Foo("bar");
 
 		public void run() {
@@ -157,19 +173,20 @@ public class BeanCreationBenchmark {
 			catch (Exception e) {
 			}
 		}
+
 	}
 
 	@State(Scope.Thread)
 	public static class EnhancerState {
 
 		public void run() {
-			Class<?> enhanced = new PublicConfigurationClassEnhancer().enhance(
-					MyConfiguration.class, MyConfiguration.class.getClassLoader());
-			MyConfiguration config = (MyConfiguration) BeanUtils
-					.instantiateClass(enhanced);
+			Class<?> enhanced = new PublicConfigurationClassEnhancer().enhance(MyConfiguration.class,
+					MyConfiguration.class.getClassLoader());
+			MyConfiguration config = (MyConfiguration) BeanUtils.instantiateClass(enhanced);
 			assert config.foo() != null;
 			assert config.bean(config.foo()).getFoo() != null;
 		}
+
 	}
 
 	@State(Scope.Thread)
@@ -204,6 +221,7 @@ public class BeanCreationBenchmark {
 			assert foo == config.foo();
 			assert config.bean(foo).getFoo() != null;
 		}
+
 	}
 
 	@State(Scope.Thread)
@@ -235,6 +253,7 @@ public class BeanCreationBenchmark {
 			assert foo != config.foo();
 			assert config.bean(foo).getFoo() != null;
 		}
+
 	}
 
 	@State(Scope.Thread)
@@ -265,6 +284,7 @@ public class BeanCreationBenchmark {
 			assert foo != null;
 			assert foo == bean.getFoo();
 		}
+
 	}
 
 	@State(Scope.Thread)
@@ -276,9 +296,8 @@ public class BeanCreationBenchmark {
 
 		public void run() {
 			DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
-			factory.registerBeanDefinition("foo",
-					BeanDefinitionBuilder.genericBeanDefinition(Foo.class)
-							.addConstructorArgReference("value").getBeanDefinition());
+			factory.registerBeanDefinition("foo", BeanDefinitionBuilder.genericBeanDefinition(Foo.class)
+					.addConstructorArgReference("value").getBeanDefinition());
 			factory.registerSingleton("value", "bar");
 			MyBean bean = factory.createBean(MyBean.class);
 			assert bean.getFoo() != null;
@@ -287,12 +306,15 @@ public class BeanCreationBenchmark {
 	}
 
 	interface Bean {
+
 		void setFoo(Foo foo);
 
 		Foo getFoo();
+
 	}
 
 	static class MyBean implements Bean {
+
 		@Autowired
 		private Foo foo;
 
@@ -303,17 +325,21 @@ public class BeanCreationBenchmark {
 			this.foo = foo;
 		}
 
+		@Override
 		public void setFoo(Foo foo) {
 			this.foo = foo;
 		}
 
+		@Override
 		public Foo getFoo() {
 			return this.foo;
 		}
+
 	}
 
 	@Configuration
 	static class MyConfiguration {
+
 		@org.springframework.context.annotation.Bean
 		public MyBean bean(Foo foo) {
 			return new MyBean(foo);
@@ -328,19 +354,21 @@ public class BeanCreationBenchmark {
 		public String value() {
 			return "bar";
 		}
+
 	}
 
-	static class FuncConfiguration
-			implements ApplicationContextInitializer<GenericApplicationContext> {
+	static class FuncConfiguration implements ApplicationContextInitializer<GenericApplicationContext> {
+
 		@Override
 		public void initialize(GenericApplicationContext registry) {
 			MyConfiguration config = new MyConfiguration();
 			registry.registerBean(String.class, () -> config.value());
 			registry.registerBean(Foo.class, () -> config.foo());
-			registry.registerBean(MyBean.class,
-					() -> config.bean(registry.getBean(Foo.class)));
+			registry.registerBean(MyBean.class, () -> config.bean(registry.getBean(Foo.class)));
 		}
+
 	}
+
 }
 
 class Foo {

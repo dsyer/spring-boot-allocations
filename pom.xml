@@ -16,11 +16,10 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>1.8</java.version>
 		<jmh.version>1.21</jmh.version>
-		<spring-boot.version>2.2.0.BUILD-SNAPSHOT</spring-boot.version>
-		<spring-cloud.version>Hoxton.BUILD-SNAPSHOT</spring-cloud.version>
+		<spring-boot.version>2.2.8.RELEASE</spring-boot.version>
+		<spring-cloud.version>Hoxton.SR5</spring-cloud.version>
 		<locator.version>1.0.0.RELEASE</locator.version>
-		<thin.version>1.0.22.RELEASE</thin.version>
-		<uberjar.name>benchmarks</uberjar.name>
+		<thin.version>1.0.25.RELEASE</thin.version>
 		<start-class>org.openjdk.jmh.Main</start-class>
 	</properties>
 
@@ -126,10 +125,39 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.github.mp911de.microbenchmark-runner</groupId>
+			<artifactId>microbenchmark-runner-junit5</artifactId>
+			<version>0.2.0.RELEASE</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.github.mp911de.microbenchmark-runner</groupId>
+			<artifactId>microbenchmark-runner-extras</artifactId>
+			<version>0.2.0.RELEASE</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
+	<profiles>
+		<profile>
+			<id>tools.jar</id>
+			<activation>
+				<jdk>[1.8,1.9)</jdk>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>com.sun</groupId>
+					<artifactId>tools</artifactId>
+					<version>${java.version}</version>
+					<scope>system</scope>
+					<systemPath>${java.home}/../lib/tools.jar</systemPath>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
+
 	<build>
-		<finalName>${uberjar.name}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -154,60 +182,14 @@
 					</excludes>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>2.4.3</version>
-				<configuration>
-					<transformers>
-						<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-							<resource>META-INF/spring.handlers</resource>
-						</transformer>
-						<transformer implementation="org.springframework.boot.maven.PropertiesMergingResourceTransformer">
-							<resource>META-INF/spring.factories</resource>
-						</transformer>
-						<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-							<resource>META-INF/spring.schemas</resource>
-						</transformer>
-						<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-							<resource>META-INF/spring.components</resource>
-						</transformer>
-						<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-							<mainClass>${start-class}</mainClass>
-						</transformer>
-						<transformer implementation="org.apache.maven.plugins.shade.resource.ComponentsXmlResourceTransformer" />
-						<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
-						<transformer
-							implementation="org.springframework.boot.loader.thin.maven.RelocatingAppendingResourceTransformer">
-							<resource>META-INF/sisu/javax.inject.Named</resource>
-						</transformer>
-					</transformers>
-				</configuration>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-					</execution>
-				</executions>
-				<dependencies>
-					<dependency>
-						<groupId>org.springframework.boot</groupId>
-						<artifactId>spring-boot-maven-plugin</artifactId>
-						<version>${spring-boot.version}</version>
-					</dependency>
-					<dependency>
-						<groupId>org.springframework.boot.experimental</groupId>
-						<artifactId>spring-boot-thin-launcher-shade-locator</artifactId>
-						<version>${locator.version}</version>
-					</dependency>
-				</dependencies>
-			</plugin>
 		</plugins>
 	</build>
 
 	<repositories>
+		<repository>
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
+		</repository>
 		<repository>
 			<id>spring-snapshots</id>
 			<name>Spring Snapshots</name>
