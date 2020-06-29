@@ -66,6 +66,12 @@ public class MetadataBenchmark {
 			return new CachingMetadataReaderFactory();
 		}
 
+		@Override
+		@TearDown(Level.Iteration)
+		public void clear() {
+			super.clear();
+		}
+
 	}
 
 	@State(Scope.Thread)
@@ -76,6 +82,12 @@ public class MetadataBenchmark {
 			return new ConcurrentReferenceCachingMetadataReaderFactory();
 		}
 
+		@Override
+		@TearDown(Level.Iteration)
+		public void clear() {
+			super.clear();
+		}
+
 	}
 
 	@State(Scope.Thread)
@@ -84,6 +96,12 @@ public class MetadataBenchmark {
 		@Override
 		protected MetadataReaderFactory createFactory() {
 			return new SimpleMetadataReaderFactory();
+		}
+
+		@Override
+		@TearDown(Level.Iteration)
+		public void clear() {
+			super.clear();
 		}
 
 	}
@@ -102,7 +120,7 @@ public class MetadataBenchmark {
 
 		protected abstract MetadataReaderFactory createFactory();
 
-		@TearDown(Level.Invocation)
+		@TearDown(Level.Iteration)
 		public void clear() {
 			if (factory instanceof CachingMetadataReaderFactory) {
 				((CachingMetadataReaderFactory) factory).clearCache();
