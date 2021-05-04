@@ -15,6 +15,7 @@
  */
 package com.example.bench;
 
+import jmh.mbr.junit5.Microbenchmark;
 import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -31,6 +32,7 @@ import org.springframework.core.type.AnnotationMetadata;
 @Measurement(iterations = 5)
 @Warmup(iterations = 3)
 @Fork(value = 1, warmups = 0)
+@Microbenchmark
 public class AnnotatedMethodBenchmark {
 
 	@Benchmark

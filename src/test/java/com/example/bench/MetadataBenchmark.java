@@ -16,6 +16,7 @@
 package com.example.bench;
 
 import com.example.demo.DemoApplication;
+import jmh.mbr.junit5.Microbenchmark;
 import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -38,6 +39,7 @@ import org.springframework.core.type.classreading.SimpleMetadataReaderFactory;
 @Measurement(iterations = 5)
 @Warmup(iterations = 3)
 @Fork(value = 1, warmups = 0)
+@Microbenchmark
 public class MetadataBenchmark {
 
 	@Benchmark

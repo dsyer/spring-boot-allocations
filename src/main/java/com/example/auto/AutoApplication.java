@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.annotation.QualifierAnnotationAutowireCandidateResolver;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.boot.ApplicationContextFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
@@ -39,7 +40,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  */
 @RestController
-public class AutoApplication implements Runnable, Closeable, ApplicationContextInitializer<GenericApplicationContext> {
+public class AutoApplication implements Runnable, Closeable,
+		ApplicationContextInitializer<GenericApplicationContext> {
 
 	public static final String MARKER = "Benchmark app started";
 
@@ -77,7 +79,8 @@ public class AutoApplication implements Runnable, Closeable, ApplicationContextI
 			}
 		};
 		application.addInitializers(this);
-		application.setApplicationContextClass(ReactiveWebServerApplicationContext.class);
+		application.setApplicationContextFactory(ApplicationContextFactory
+				.of(() -> new ReactiveWebServerApplicationContext()));
 		this.context = application.run();
 		System.err.println(MARKER);
 	}
@@ -86,18 +89,24 @@ public class AutoApplication implements Runnable, Closeable, ApplicationContextI
 	public void initialize(GenericApplicationContext context) {
 		DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
 		if (beanFactory != null) {
-			if (!(beanFactory.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
-				beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
+			if (!(beanFactory
+					.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
+				beanFactory
+						.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
 			}
 			// N.B. ContextAnnotationAutowireCandidateResolver is normal, but that's more
 			// expensive
 			// (checks for @Lazy)
-			if (!(beanFactory.getAutowireCandidateResolver() instanceof QualifierAnnotationAutowireCandidateResolver)) {
-				beanFactory.setAutowireCandidateResolver(new QualifierAnnotationAutowireCandidateResolver());
+			if (!(beanFactory
+					.getAutowireCandidateResolver() instanceof QualifierAnnotationAutowireCandidateResolver)) {
+				beanFactory.setAutowireCandidateResolver(
+						new QualifierAnnotationAutowireCandidateResolver());
 			}
-			beanFactory.addBeanPostProcessor(beanFactory.createBean(AutowiredAnnotationBeanPostProcessor.class));
+			beanFactory.addBeanPostProcessor(
+					beanFactory.createBean(AutowiredAnnotationBeanPostProcessor.class));
 		}
-		AutoConfigurationPackages.register(context, ClassUtils.getPackageName(getClass()));
+		AutoConfigurationPackages.register(context,
+				ClassUtils.getPackageName(getClass()));
 		ConfigurationPropertiesBindingPostProcessor.register(context);
 		context.addBeanFactoryPostProcessor(new AutoConfigurations(context));
 		context.registerBean(AutoApplication.class, () -> this);

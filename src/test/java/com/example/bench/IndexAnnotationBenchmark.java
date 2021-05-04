@@ -27,6 +27,7 @@ import java.util.ServiceLoader;
 import com.example.config.ComponentIndex;
 import com.example.config.ComponentIndex.Entry;
 import com.example.config.ComponentIndexer;
+import jmh.mbr.junit5.Microbenchmark;
 import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -45,6 +46,7 @@ import org.springframework.util.StringUtils;
 @Measurement(iterations = 5)
 @Warmup(iterations = 3)
 @Fork(value = 1, warmups = 0)
+@Microbenchmark
 public class IndexAnnotationBenchmark {
 
 	@Benchmark

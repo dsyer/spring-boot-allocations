@@ -21,6 +21,7 @@ import com.example.func.BuncApplication;
 import com.example.func.CuncApplication;
 import com.example.func.FuncApplication;
 import com.example.manual.ManualApplication;
+import jmh.mbr.junit5.Microbenchmark;
 import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -33,6 +34,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @Warmup(iterations = 1)
 @Fork(value = 2, warmups = 0)
 @BenchmarkMode(Mode.SingleShotTime)
+@Microbenchmark
 public class MainBenchmark {
 
 	@Benchmark

@@ -16,12 +16,14 @@
 
 package com.example.func;
 
+import org.springframework.boot.ApplicationContextFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
 import org.springframework.context.annotation.ConfigurationClassPostProcessor;
 
 /**
- * Functional bean definitions. With Spring Boot, including {@link ConfigurationClassPostProcessor}.
+ * Functional bean definitions. With Spring Boot, including
+ * {@link ConfigurationClassPostProcessor}.
  * 
  * @author Dave Syer
  *
@@ -43,7 +45,8 @@ public class CuncApplication extends FuncApplication {
 	public void run() {
 		SpringApplication application = new SpringApplication(CuncApplication.class);
 		application.addInitializers(this);
-		application.setApplicationContextClass(ReactiveWebServerApplicationContext.class);
+		application.setApplicationContextFactory(ApplicationContextFactory
+				.of(() -> new ReactiveWebServerApplicationContext()));
 		application.run();
 		System.err.println(MARKER);
 	}

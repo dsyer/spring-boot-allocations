@@ -3,6 +3,7 @@ package com.example.bench;
 import java.io.Closeable;
 import java.io.IOException;
 
+import org.springframework.boot.DefaultBootstrapContext;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.boot.context.event.ApplicationFailedEvent;
@@ -27,24 +28,28 @@ public class LoggingSystemAllocations {
 			System.out.println("Duration: " + (end - start));
 		}
 	}
-	
+
 	public static class TestApplication implements Runnable, Closeable {
 		private LoggingApplicationListener listener;
 		private SpringApplication application;
 		private static ConfigurableEnvironment environment = new StandardEnvironment();
+
 		@Override
 		public void close() throws IOException {
 			listener.onApplicationEvent(new ApplicationFailedEvent(application,
 					new String[0], null, new RuntimeException()));
 		}
+
+		@Override
 		public void run() {
 			listener = new LoggingApplicationListener();
 			application = new SpringApplication(TestApplication.class);
-			listener.onApplicationEvent(
-					new ApplicationStartingEvent(application, new String[0]));
+			listener.onApplicationEvent(new ApplicationStartingEvent(
+					new DefaultBootstrapContext(), application, new String[0]));
 			ConfigurableEnvironment environment = TestApplication.environment;
-			listener.onApplicationEvent(new ApplicationEnvironmentPreparedEvent(
-					application, new String[0], environment));
+			listener.onApplicationEvent(
+					new ApplicationEnvironmentPreparedEvent(new DefaultBootstrapContext(),
+							application, new String[0], environment));
 		}
 	}
 
