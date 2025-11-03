@@ -16,18 +16,17 @@
 
 package com.example.bench;
 
-import com.example.auto.AutoApplication;
-import com.example.boot.BootApplication;
-import com.example.func.FuncApplication;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.example.boot.BootApplication;
+import com.example.func.FuncApplication;
 
 /**
  * @author Dave Syer
@@ -76,14 +75,6 @@ public class LauncherStateTests {
 	public void boot(CapturedOutput output) throws Exception {
 		// System.setProperty("bench.args", "-verbose:class");
 		state.setMainClass(BootApplication.class);
-		state.shared();
-		assertThat(output.toString()).contains("Benchmark app started");
-	}
-
-	@Test
-	public void auto(CapturedOutput output) throws Exception {
-		// System.setProperty("bench.args", "-verbose:class");
-		state.setMainClass(AutoApplication.class);
 		state.shared();
 		assertThat(output.toString()).contains("Benchmark app started");
 	}

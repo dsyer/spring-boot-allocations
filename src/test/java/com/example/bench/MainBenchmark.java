@@ -15,13 +15,6 @@
  */
 package com.example.bench;
 
-import com.example.auto.AutoApplication;
-import com.example.boot.BootApplication;
-import com.example.func.BuncApplication;
-import com.example.func.CuncApplication;
-import com.example.func.FuncApplication;
-import com.example.manual.ManualApplication;
-import jmh.mbr.junit5.Microbenchmark;
 import org.junit.platform.commons.annotation.Testable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -29,6 +22,14 @@ import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Warmup;
+
+import com.example.boot.BootApplication;
+import com.example.func.BuncApplication;
+import com.example.func.CuncApplication;
+import com.example.func.FuncApplication;
+import com.example.manual.ManualApplication;
+
+import jmh.mbr.junit5.Microbenchmark;
 
 @Measurement(iterations = 5)
 @Warmup(iterations = 1)
@@ -75,13 +76,6 @@ public class MainBenchmark {
 	@Testable
 	public void func(LauncherState state) throws Exception {
 		state.setMainClass(FuncApplication.class);
-		state.isolated();
-	}
-
-	@Benchmark
-	@Testable
-	public void auto(LauncherState state) throws Exception {
-		state.setMainClass(AutoApplication.class);
 		state.isolated();
 	}
 
