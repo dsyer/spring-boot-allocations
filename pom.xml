@@ -16,8 +16,8 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>1.8</java.version>
 		<jmh.version>1.21</jmh.version>
-		<spring-boot.version>3.1.3</spring-boot.version>
-		<spring-cloud.version>2023.0.6</spring-cloud.version>
+		<spring-boot.version>3.5.6</spring-boot.version>
+		<spring-cloud.version>2025.0.0</spring-cloud.version>
 		<locator.version>1.0.0.RELEASE</locator.version>
 		<thin.version>1.0.22.RELEASE</thin.version>
 		<uberjar.name>benchmarks</uberjar.name>

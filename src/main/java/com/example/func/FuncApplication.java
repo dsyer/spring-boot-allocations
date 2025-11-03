@@ -302,6 +302,7 @@ public class FuncApplication implements Runnable, Closeable,
 								context.getBean(ReactiveAdapterRegistry.class),
 								context.getBean(ServerCodecConfigurer.class),
 								context.getBean(FormattingConversionService.class),
+								context.getBean(RequestedContentTypeResolver.class),
 								context.getBean(Validator.class)));
 		context.registerBean(RequestMappingHandlerMapping.class,
 				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
@@ -362,7 +363,8 @@ public class FuncApplication implements Runnable, Closeable,
 				DispatcherHandler.class, () -> context
 						.getBean(EnableWebFluxConfigurationWrapper.class).webHandler());
 		context.registerBean(WebFluxConfigurer.class,
-				() -> new WebFluxConfig(context.getBean(WebProperties.class),
+				() -> new WebFluxConfig(context.getEnvironment(),
+						context.getBean(WebProperties.class),
 						context.getBean(WebFluxProperties.class), context,
 						context.getBeanProvider(HandlerMethodArgumentResolver.class),
 						context.getBeanProvider(CodecCustomizer.class),
