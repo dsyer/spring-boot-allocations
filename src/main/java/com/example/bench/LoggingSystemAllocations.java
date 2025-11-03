@@ -3,6 +3,8 @@ package com.example.bench;
 import java.io.Closeable;
 import java.io.IOException;
 
+import org.springframework.boot.ConfigurableBootstrapContext;
+import org.springframework.boot.DefaultBootstrapContext;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
 import org.springframework.boot.context.event.ApplicationFailedEvent;
@@ -38,13 +40,14 @@ public class LoggingSystemAllocations {
 					new String[0], null, new RuntimeException()));
 		}
 		public void run() {
+			ConfigurableBootstrapContext bootstrap = new DefaultBootstrapContext();
 			listener = new LoggingApplicationListener();
 			application = new SpringApplication(TestApplication.class);
 			listener.onApplicationEvent(
-					new ApplicationStartingEvent(application, new String[0]));
+					new ApplicationStartingEvent(bootstrap, application, new String[0]));
 			ConfigurableEnvironment environment = TestApplication.environment;
 			listener.onApplicationEvent(new ApplicationEnvironmentPreparedEvent(
-					application, new String[0], environment));
+					bootstrap, application, new String[0], environment));
 		}
 	}
 

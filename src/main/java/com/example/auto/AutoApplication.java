@@ -23,7 +23,7 @@ import org.springframework.beans.factory.annotation.QualifierAnnotationAutowireC
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
-import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessorRegistrar;
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
 import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
@@ -78,7 +78,7 @@ public class AutoApplication implements Runnable, Closeable,
 			}
 		};
 		application.addInitializers(this);
-		application.setApplicationContextClass(ReactiveWebServerApplicationContext.class);
+		application.setApplicationContextFactory(type -> new ReactiveWebServerApplicationContext());
 		this.context = application.run();
 		System.err.println(MARKER);
 	}
@@ -105,8 +105,7 @@ public class AutoApplication implements Runnable, Closeable,
 		}
 		AutoConfigurationPackages.register(context,
 				ClassUtils.getPackageName(getClass()));
-		new ConfigurationPropertiesBindingPostProcessorRegistrar()
-				.registerBeanDefinitions(null, context);
+		ConfigurationPropertiesBindingPostProcessor.register(context);
 		context.addBeanFactoryPostProcessor(new AutoConfigurations(context));
 		context.registerBean(AutoApplication.class, () -> this);
 	}
