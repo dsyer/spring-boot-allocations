@@ -670,7 +670,7 @@ BinderBenchmark.map     thrpt    5   16381.371 ±  3743.830  ops/s
 BinderBenchmark.wrapped thrpt    5   15568.784 ±   580.370  ops/s
 ```
 
-The "direct" sample uses `Environment.getProperty()`, and the "binder
+The "direct" sample uses `Environment.getProperty()`, and the "binder"
 sample uses `Binder.bind()`. The "map" benchmark uses a
 MapConfigurationPropertySource instead of the full Environment (I
 noticed this pattern in XADataSourceAutoConfiguration). It's only 10x
