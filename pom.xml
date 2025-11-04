@@ -17,35 +17,15 @@
 		<java.version>17</java.version>
 		<jmh.version>1.21</jmh.version>
 		<spring-boot.version>3.5.7</spring-boot.version>
-		<spring-cloud.version>2025.0.0</spring-cloud.version>
-		<locator.version>1.0.0.RELEASE</locator.version>
-		<thin.version>1.0.25.RELEASE</thin.version>
 		<start-class>org.openjdk.jmh.Main</start-class>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>org.apache.maven</groupId>
-				<artifactId>maven-aether-provider</artifactId>
-				<version>3.3.9</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.maven</groupId>
-				<artifactId>maven-settings-builder</artifactId>
-				<version>3.3.9</version>
-			</dependency>
-			<dependency>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-dependencies</artifactId>
 				<version>${spring-boot.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-dependencies</artifactId>
-				<version>${spring-cloud.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -102,10 +82,6 @@
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.aspectj</groupId>
-			<artifactId>aspectjweaver</artifactId>
-		</dependency>
 
 		<dependency>
 			<groupId>org.openjdk.jmh</groupId>
@@ -138,24 +114,6 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-
-	<profiles>
-		<profile>
-			<id>tools.jar</id>
-			<activation>
-				<jdk>[1.8,1.9)</jdk>
-			</activation>
-			<dependencies>
-				<dependency>
-					<groupId>com.sun</groupId>
-					<artifactId>tools</artifactId>
-					<version>${java.version}</version>
-					<scope>system</scope>
-					<systemPath>${java.home}/../lib/tools.jar</systemPath>
-				</dependency>
-			</dependencies>
-		</profile>
-	</profiles>
 
 	<build>
 		<plugins>
