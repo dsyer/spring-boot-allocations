@@ -34,7 +34,7 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.StandardEnvironment;
 
-import jmh.mbr.junit5.Microbenchmark;
+import jmh.mbr.junit.Microbenchmark;
 
 @Measurement(iterations = 5)
 @Warmup(iterations = 3)

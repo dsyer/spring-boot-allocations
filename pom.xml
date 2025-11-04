@@ -15,8 +15,8 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>17</java.version>
-		<jmh.version>1.21</jmh.version>
-		<spring-boot.version>3.5.7</spring-boot.version>
+		<jmh.version>1.37</jmh.version>
+		<spring-boot.version>4.0.0-RC1</spring-boot.version>
 		<start-class>org.openjdk.jmh.Main</start-class>
 	</properties>
 
@@ -103,14 +103,14 @@
 		</dependency>
 		<dependency>
 			<groupId>com.github.mp911de.microbenchmark-runner</groupId>
-			<artifactId>microbenchmark-runner-junit5</artifactId>
-			<version>0.5.0.RELEASE</version>
+			<artifactId>microbenchmark-runner-junit</artifactId>
+			<version>1.0.0</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.github.mp911de.microbenchmark-runner</groupId>
 			<artifactId>microbenchmark-runner-extras</artifactId>
-			<version>0.5.0.RELEASE</version>
+			<version>1.0.0</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
