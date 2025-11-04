@@ -19,6 +19,7 @@ package org.springframework.boot.context.config;
 import org.springframework.boot.ansi.AnsiOutput;
 import org.springframework.boot.ansi.AnsiOutput.Enabled;
 import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
+import org.springframework.boot.env.EnvironmentPostProcessorApplicationListener;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -49,7 +50,7 @@ public class AnsiOutputApplicationListener
 	@Override
 	public int getOrder() {
 		// Apply after ConfigFileApplicationListener has called EnvironmentPostProcessors
-		return ConfigFileApplicationListener.DEFAULT_ORDER + 1;
+		return EnvironmentPostProcessorApplicationListener.DEFAULT_ORDER + 1;
 	}
 
 }

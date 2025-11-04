@@ -16,8 +16,8 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>1.8</java.version>
 		<jmh.version>1.21</jmh.version>
-		<spring-boot.version>2.4.5</spring-boot.version>
-		<spring-cloud.version>2020.0.2</spring-cloud.version>
+		<spring-boot.version>3.1.3</spring-boot.version>
+		<spring-cloud.version>2023.0.6</spring-cloud.version>
 		<locator.version>1.0.0.RELEASE</locator.version>
 		<thin.version>1.0.25.RELEASE</thin.version>
 		<start-class>org.openjdk.jmh.Main</start-class>
@@ -128,13 +128,13 @@
 		<dependency>
 			<groupId>com.github.mp911de.microbenchmark-runner</groupId>
 			<artifactId>microbenchmark-runner-junit5</artifactId>
-			<version>0.2.0.RELEASE</version>
+			<version>0.3.0.RELEASE</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.github.mp911de.microbenchmark-runner</groupId>
 			<artifactId>microbenchmark-runner-extras</artifactId>
-			<version>0.2.0.RELEASE</version>
+			<version>0.3.0.RELEASE</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -162,7 +162,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.8.0</version>
+				<version>3.14.1</version>
 				<configuration>
 					<source>${java.version}</source>
 					<target>${java.version}</target>
@@ -171,7 +171,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
-				<version>2.19.1</version>
+				<version>3.5.4</version>
 				<configuration>
 					<includes>
 						<include>**/*Tests.java</include>

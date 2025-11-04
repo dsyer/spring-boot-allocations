@@ -1,5 +1,10 @@
 package com.example.func;
 
+import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
+import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
+import static org.springframework.web.reactive.function.server.RouterFunctions.route;
+import static org.springframework.web.reactive.function.server.ServerResponse.ok;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -11,13 +16,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import com.example.config.LazyInitBeanFactoryPostProcessor;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import reactor.core.publisher.Mono;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory;
@@ -26,7 +26,6 @@ import org.springframework.boot.autoconfigure.gson.GsonAutoConfiguration;
 import org.springframework.boot.autoconfigure.gson.GsonBuilderCustomizer;
 import org.springframework.boot.autoconfigure.gson.GsonProperties;
 import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
-import org.springframework.boot.autoconfigure.web.ResourceProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.autoconfigure.web.WebProperties;
 import org.springframework.boot.autoconfigure.web.reactive.ReactiveWebServerFactoryAutoConfiguration;
@@ -39,6 +38,7 @@ import org.springframework.boot.autoconfigure.web.reactive.WebFluxRegistrations;
 import org.springframework.boot.autoconfigure.web.reactive.error.ErrorWebFluxAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
+import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.web.codec.CodecCustomizer;
 import org.springframework.boot.web.embedded.netty.NettyReactiveWebServerFactory;
 import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
@@ -63,6 +63,7 @@ import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.GsonHttpMessageConverter;
 import org.springframework.http.server.reactive.HttpHandler;
+import org.springframework.lang.Nullable;
 import org.springframework.validation.Validator;
 import org.springframework.web.reactive.DispatcherHandler;
 import org.springframework.web.reactive.HandlerMapping;
@@ -89,10 +90,11 @@ import org.springframework.web.server.WebFilterChain;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 import org.springframework.web.server.i18n.LocaleContextResolver;
 
-import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
-import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
-import static org.springframework.web.reactive.function.server.RouterFunctions.route;
-import static org.springframework.web.reactive.function.server.ServerResponse.ok;
+import com.example.config.LazyInitBeanFactoryPostProcessor;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import reactor.core.publisher.Mono;
 
 public class FuncApplication implements Runnable, Closeable,
 		ApplicationContextInitializer<GenericApplicationContext> {
@@ -107,11 +109,11 @@ public class FuncApplication implements Runnable, Closeable,
 	public RouterFunction<?> userEndpoints() {
 		return route(GET("/"),
 				request -> ok().body(Mono.just("Hello"), String.class))
-						.andRoute(POST("/"),
-								request -> ok().body(
-										request.bodyToFlux(String.class)
-												.map(value -> value.toUpperCase()),
-										String.class));
+				.andRoute(POST("/"),
+						request -> ok().body(
+								request.bodyToFlux(String.class)
+										.map(value -> value.toUpperCase()),
+								String.class));
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -139,8 +141,7 @@ public class FuncApplication implements Runnable, Closeable,
 		try {
 			logger.info("Class count: " + id + "=" + ManagementFactory
 					.getClassLoadingMXBean().getTotalLoadedClassCount());
-		}
-		catch (Throwable e) {
+		} catch (Throwable e) {
 		}
 	}
 
@@ -202,7 +203,7 @@ public class FuncApplication implements Runnable, Closeable,
 		}
 
 		@Override
-		public Object convert(Object source, TypeDescriptor sourceType,
+		public Object convert(@Nullable Object source, TypeDescriptor sourceType,
 				TypeDescriptor targetType) {
 			return null;
 		}
@@ -221,23 +222,20 @@ public class FuncApplication implements Runnable, Closeable,
 				public void runSafely(Runnable runnable) {
 					try {
 						runnable.run();
-					}
-					catch (Throwable ex) {
+					} catch (Throwable ex) {
 						// Ignore
 					}
 				}
 
 			}, "background-preinit");
 			thread.start();
-		}
-		catch (Exception ex) {
+		} catch (Exception ex) {
 		}
 	}
 
 	private void registerConfigurationProperties() {
 		ConfigurationPropertiesBindingPostProcessor.register(context);
 		context.registerBean(ServerProperties.class, () -> new ServerProperties());
-		context.registerBean(ResourceProperties.class, () -> new ResourceProperties());
 		context.registerBean(WebProperties.class, () -> new WebProperties());
 		context.registerBean(WebFluxProperties.class, () -> new WebFluxProperties());
 		context.registerBean(GsonProperties.class, () -> new GsonProperties());
@@ -258,7 +256,10 @@ public class FuncApplication implements Runnable, Closeable,
 		ReactiveWebServerFactoryAutoConfiguration config = new ReactiveWebServerFactoryAutoConfiguration();
 		context.registerBean(ReactiveWebServerFactoryCustomizer.class,
 				() -> config.reactiveWebServerFactoryCustomizer(
-						context.getBean(ServerProperties.class)));
+						context.getBean(ServerProperties.class),
+						context.getDefaultListableBeanFactory()
+								.getBeanProvider(ResolvableType.forClassWithGenerics(
+										List.class, SslBundle.class))));
 		context.registerBean(NettyReactiveWebServerFactory.class,
 				() -> new NettyReactiveWebServerFactory());
 	}
@@ -268,7 +269,6 @@ public class FuncApplication implements Runnable, Closeable,
 		context.registerBean(ErrorWebExceptionHandler.class, () -> {
 			return errorWebFluxAutoConfiguration().errorWebExceptionHandler(
 					context.getBean(ErrorAttributes.class),
-					context.getBean(ResourceProperties.class),
 					context.getBean(WebProperties.class),
 					context.getDefaultListableBeanFactory()
 							.getBeanProvider(ResolvableType.forClassWithGenerics(
@@ -287,6 +287,7 @@ public class FuncApplication implements Runnable, Closeable,
 				() -> new EnableWebFluxConfigurationWrapper(
 						context.getBean(WebFluxProperties.class),
 						context.getBean(WebProperties.class),
+						context.getBean(ServerProperties.class),
 						context.getBeanProvider(WebFluxRegistrations.class)));
 		context.registerBean(HandlerFunctionAdapter.class,
 				() -> context.getBean(EnableWebFluxConfigurationWrapper.class)
@@ -361,8 +362,7 @@ public class FuncApplication implements Runnable, Closeable,
 				DispatcherHandler.class, () -> context
 						.getBean(EnableWebFluxConfigurationWrapper.class).webHandler());
 		context.registerBean(WebFluxConfigurer.class,
-				() -> new WebFluxConfig(context.getBean(ResourceProperties.class),
-						context.getBean(WebProperties.class),
+				() -> new WebFluxConfig(context.getBean(WebProperties.class),
 						context.getBean(WebFluxProperties.class), context,
 						context.getBeanProvider(HandlerMethodArgumentResolver.class),
 						context.getBeanProvider(CodecCustomizer.class),
@@ -419,9 +419,9 @@ public class FuncApplication implements Runnable, Closeable,
 class EnableWebFluxConfigurationWrapper extends EnableWebFluxConfiguration {
 
 	public EnableWebFluxConfigurationWrapper(WebFluxProperties webFluxProperties,
-			WebProperties webProperties,
+			WebProperties webProperties, ServerProperties serverProperties,
 			ObjectProvider<WebFluxRegistrations> webFluxRegistrations) {
-		super(webFluxProperties, webProperties, webFluxRegistrations);
+		super(webFluxProperties, webProperties, serverProperties, webFluxRegistrations);
 	}
 
 }
