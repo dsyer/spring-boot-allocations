@@ -121,7 +121,7 @@ public class LauncherState implements Runnable, Closeable {
 	}
 
 	private Class<?> loadMainClass(Class<?> type) throws ClassNotFoundException {
-		URL[] urls = ((URLClassLoader) getClass().getClassLoader()).getURLs();
+		URL[] urls = ClassPathExtractor.getUrls().toArray(new URL[0]);
 		loader = new URLClassLoader(urls, getClass().getClassLoader().getParent());
 		orig = ClassUtils.overrideThreadContextClassLoader(loader);
 		return loader.loadClass(type.getName());
